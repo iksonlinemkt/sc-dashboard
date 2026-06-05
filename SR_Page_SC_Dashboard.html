@@ -293,7 +293,7 @@ function _initDashboard(data){
   if(stEl){stEl.className="ok";stEl.style.display="inline-block";stEl.textContent="✅ โหลดข้อมูล "+RAW.length.toLocaleString("th-TH")+" records";}
 }
 // ดึงข้อมูลจาก JSON เสมอ (ไม่ใช้ localStorage เก็บ data)
-fetch("sr_data.json")
+fetch("sr_data.json?v="+Date.now())
   .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
   .then(function(data){console.log("[SR] loaded from JSON:", data.length);_initDashboard(data);})
   .catch(function(err){console.error("[SR] fetch failed:", err);});;

@@ -288,7 +288,7 @@ function _initDashboard(data){
 }
 // โหลด localStorage ก่อน ถ้าไม่มีค่อย fetch JSON
 // ดึงข้อมูลจาก JSON เสมอ (ไม่ใช้ localStorage เก็บ data)
-fetch("bn_data.json")
+fetch("bn_data.json?v="+Date.now())
   .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
   .then(function(data){console.log("[BN] loaded from JSON:", data.length);_initDashboard(data);})
   .catch(function(err){console.error("[BN] fetch failed:", err);});;
