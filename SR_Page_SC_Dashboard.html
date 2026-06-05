@@ -274,6 +274,11 @@ var _embeddedData=[];
 var RAW=[];
 var FILTERED=[];
 var ALL_PAGES=[],ALL_MONTHS_RAW=[],ALL_YEARS=[];
+var charts={};
+var C={gold:'#c8972a',gold2:'#f5c842',blue:'#1a6eb5',blue2:'#2d8fd4',cyan:'#48b8e0',text:'#f0e6d0',text2:'#c8b88a',text3:'#a09070'};
+var filterMode='monthyear';
+var topSortOrganic='desc', topSortPaid='desc';
+var table0SortCol=null, table0SortDir='desc';
 var MONTH_NAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function _initDashboard(data){
   RAW=data;
