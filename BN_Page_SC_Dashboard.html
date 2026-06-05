@@ -268,7 +268,19 @@ var _bin=atob(_b64);
 var _bytes=new Uint8Array(_bin.length);
 for(var _i=0;_i<_bin.length;_i++) _bytes[_i]=_bin.charCodeAt(_i);
 var _embeddedData=JSON.parse(new TextDecoder("utf-8").decode(_bytes));
-var _saved=null;try{var _s=localStorage.getItem("BN_SC_Dashboard_data");if(_s)_saved=JSON.parse(_s);}catch(e){}
+var _EMBED_VERSION=_embeddedData.length;
+var _saved=null;
+try{
+  var _s=localStorage.getItem("BN_SC_Dashboard_data");
+  var _sv=parseInt(localStorage.getItem("BN_SC_Dashboard_embed_version")||"0");
+  if(_s && _sv===_EMBED_VERSION){_saved=JSON.parse(_s);}
+  else if(_s && _sv!==_EMBED_VERSION){
+    localStorage.removeItem("BN_SC_Dashboard_data");
+    localStorage.removeItem("BN_SC_Dashboard_ts");
+    localStorage.removeItem("BN_SC_Dashboard_embed_version");
+    console.log("[BN] New HTML deployed, cleared localStorage.");
+  }
+}catch(e){}
 var RAW=_saved||_embeddedData;
 if(_saved){console.log("[BN] Loaded from localStorage:", RAW.length, "records");}
 
@@ -500,6 +512,7 @@ window.importExcel = function(input) {
       try{
         localStorage.setItem('BN_SC_Dashboard_data', JSON.stringify(allRecords));
         localStorage.setItem('BN_SC_Dashboard_ts', new Date().toLocaleString('th-TH'));
+        localStorage.setItem('BN_SC_Dashboard_embed_version', String(_EMBED_VERSION));
       }catch(e){}
       status.className='ok';
       status.textContent='\u2705 '+allRecords.length.toLocaleString('th-TH')+' records | '+wb.SheetNames.length+' sheets | '+monthList;
@@ -546,44 +559,37 @@ function rebuildFilters() {
 
 // ── SAVE AS HTML (Embed data + Download) ────────────────────────────────────
 function saveAsHTML() {
-  if (!RAW || !RAW.length) {
-    alert('ไม่มีข้อมูล กรุณา Import Excel ก่อน');
-    return;
-  }
-  try {
-    // Encode new data as base64
-    var jsonStr = JSON.stringify(RAW);
-    var encoded = btoa(unescape(encodeURIComponent(jsonStr)));
-    
-    // Get current HTML source
-    var src = document.documentElement.outerHTML;
-    
-    // Replace _b64 value with new encoded data
-    var newSrc = src.replace(/var _b64="[^"]*"/, 'var _b64="' + encoded + '"');
-    
-    // Also remove localStorage code to keep it clean
-    // (not needed since data is now embedded)
-    
-    // Create download
-    var blob = new Blob([newSrc], {type: 'text/html;charset=utf-8'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = document.title.replace(/[^a-zA-Z0-9ก-๙_-]/g,'_') + '_updated.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    var stEl = document.getElementById('importStatus');
-    if(stEl) {
-      stEl.className = 'ok';
-      stEl.style.display = 'inline-block';
-      stEl.textContent = '💾 บันทึกไฟล์ HTML สำเร็จ พร้อม deploy Netlify!';
-    }
-  } catch(err) {
-    alert('Error: ' + err.message);
-  }
+  if (!RAW || !RAW.length) { alert("ไม่มีข้อมูล กรุณา Import Excel ก่อน"); return; }
+  var jsonStr = JSON.stringify(RAW);
+  var encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+  var filename = document.title.replace(/[^a-zA-Z0-9ก-๙_-]/g,"_") + "_updated.html";
+  var stEl = document.getElementById("importStatus");
+  fetch(window.location.href)
+    .then(function(r){ return r.text(); })
+    .then(function(src){
+      var newSrc = src.replace(/var _b64="[^"]*"/, 'var _b64="' + encoded + '"');
+      if(newSrc === src){ throw new Error("ไม่พบ _b64 ใน source"); }
+      var blob = new Blob([newSrc], {type:"text/html;charset=utf-8"});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href=url; a.download=filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      if(stEl){stEl.className="ok";stEl.style.display="inline-block";stEl.textContent="💾 บันทึกไฟล์ HTML สำเร็จ พร้อม push GitHub";}
+    })
+    .catch(function(err){
+      try{
+        var src2 = document.documentElement.outerHTML;
+        var newSrc2 = src2.replace(/var _b64="[^"]*"/, 'var _b64="' + encoded + '"');
+        var blob2 = new Blob([newSrc2],{type:"text/html;charset=utf-8"});
+        var url2 = URL.createObjectURL(blob2);
+        var a2 = document.createElement("a");
+        a2.href=url2; a2.download=filename;
+        document.body.appendChild(a2); a2.click();
+        document.body.removeChild(a2); URL.revokeObjectURL(url2);
+        if(stEl){stEl.className="ok";stEl.style.display="inline-block";stEl.textContent="💾 บันทึกสำเร็จ (fallback)";}
+      }catch(e2){alert("Error: "+err.message);}
+    });
 }
 // ── END SAVE AS HTML ─────────────────────────────────────────────────────────
 
