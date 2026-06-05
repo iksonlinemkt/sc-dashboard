@@ -280,60 +280,11 @@ function _initDashboard(data){
   if(stEl){stEl.className="ok";stEl.style.display="inline-block";stEl.textContent="✅ โหลดข้อมูล "+RAW.length.toLocaleString("th-TH")+" records";}
 }
 // โหลด localStorage ก่อน ถ้าไม่มีค่อย fetch JSON
-var _lsData=null;
-try{var _s=localStorage.getItem("BN_SC_Dashboard_data");if(_s)_lsData=JSON.parse(_s);}catch(e){}
-if(_lsData&&_lsData.length){
-  console.log("[BN] loaded from localStorage:", _lsData.length);
-  _initDashboard(_lsData);
-} else {
-  fetch("bn_data.json")
-    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
-    .then(function(data){console.log("[BN] loaded from JSON:", data.length);_initDashboard(data);})
-    .catch(function(err){console.error("[BN] fetch failed:", err);});
-}
-
-var C={gold:'#c8972a',gold2:'#f5c842',gold3:'#e8a030',blue:'#1a6eb5',blue2:'#2d8fd4',cyan:'#48b8e0',text:'#f0e6d0',text2:'#c8b88a'};
-var PALETTE=[C.gold,C.blue2,C.cyan,C.gold3,C.blue,'#7eb8d4','#d4a040','#5090c0','#a07828','#3a7aaa','#e0b840','#6ab0d8','#b89020','#2060a0','#f0d060'];
-
-var ALL_PAGES=[...new Set(RAW.map(function(d){return d.scPage;}))].sort();
-var ALL_MONTHS_RAW=[...new Set(RAW.map(function(d){return d.month;}))].sort();
-var ALL_YEARS=[...new Set(ALL_MONTHS_RAW.map(function(m){return m.split('-')[0];}))].sort();
-var FILTERED=RAW.slice();
-var charts={};
-var topSortOrganic='desc', topSortPaid='desc';
-var table0SortCol=null, table0SortDir='desc';
-var filterMode='monthyear';
-
-var MONTH_NAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-// Populate filter selects
-var fpEl=document.getElementById('fPage');
-ALL_PAGES.forEach(function(p){var o=document.createElement('option');o.value=p;o.text=p;fpEl.appendChild(o);});
-
-var fyEl=document.getElementById('fYear');
-ALL_YEARS.forEach(function(y){var o=document.createElement('option');o.value=y;o.text=y;fyEl.appendChild(o);});
-
-var fmEl=document.getElementById('fMonth');
-ALL_MONTHS_RAW.forEach(function(mo){
-  var parts=mo.split('-');
-  var lbl=MONTH_NAMES[parseInt(parts[1])-1]+' '+parts[0];
-  var o=document.createElement('option');
-  o.value=mo; o.textContent=lbl; fmEl.appendChild(o);
-});
-
-// Filter mode toggle
-window.setFilterMode=function(mode){
-  filterMode=mode;
-  var isM=(mode==='monthyear');
-  document.getElementById('btnModeMonthYear').classList.toggle('active',isM);
-  document.getElementById('btnModeDateRange').classList.toggle('active',!isM);
-  document.getElementById('fYear').disabled=!isM;
-  document.getElementById('fMonth').disabled=!isM;
-  document.getElementById('fFrom').disabled=isM;
-  document.getElementById('fTo').disabled=isM;
-  if(isM){document.getElementById('fFrom').value='';document.getElementById('fTo').value='';}
-  else{document.getElementById('fYear').value='';document.getElementById('fMonth').value='';}
-};
+// ดึงข้อมูลจาก JSON เสมอ (ไม่ใช้ localStorage เก็บ data)
+fetch("bn_data.json")
+  .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+  .then(function(data){console.log("[BN] loaded from JSON:", data.length);_initDashboard(data);})
+  .catch(function(err){console.error("[BN] fetch failed:", err);});;
 // Init: disable date range inputs on load
 document.getElementById('fFrom').disabled=true;
 document.getElementById('fTo').disabled=true;
@@ -516,10 +467,7 @@ window.importExcel = function(input) {
       var monthCounts={};
       allRecords.forEach(function(r){monthCounts[r.month]=(monthCounts[r.month]||0)+1;});
       var monthList=Object.keys(monthCounts).sort().map(function(k){return k+':'+monthCounts[k];}).join(', ');
-      // Save imported data to localStorage for persistence
       try{
-        localStorage.setItem('BN_SC_Dashboard_data', JSON.stringify(allRecords));
-        localStorage.setItem('BN_SC_Dashboard_ts', new Date().toLocaleString('th-TH'));
       }catch(e){}
       status.className='ok';
       status.textContent='\u2705 '+allRecords.length.toLocaleString('th-TH')+' records | '+wb.SheetNames.length+' sheets | '+monthList;
