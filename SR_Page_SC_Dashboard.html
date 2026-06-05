@@ -119,6 +119,21 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
 #importStatus{font-size:.8rem;padding:4px 10px;border-radius:6px;display:none;margin-left:8px;}
 #importStatus.ok{background:#1a3d2b;color:#4ade80;display:inline-block;}
 #importStatus.err{background:#3d1a1a;color:#f87171;display:inline-block;}
+
+.btn-update{background:linear-gradient(135deg,#0d7a3e,#1ab860);color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:6px;}
+.btn-update:hover{opacity:.88;transform:scale(1.04);}
+.btn-update:disabled{opacity:.45;cursor:wait;transform:none;}
+#gsStatus{font-size:.8rem;padding:4px 10px;border-radius:6px;display:none;margin-left:6px;}
+#gsStatus.ok{background:#1a3d2b;color:#4ade80;display:inline-block;}
+#gsStatus.err{background:#3d1a1a;color:#f87171;display:inline-block;}
+#gsStatus.loading{background:#1a2a3d;color:#60b4f8;display:inline-block;}
+/* Pagination */
+.pagination{display:flex;gap:6px;align-items:center;padding:10px 0;flex-wrap:wrap;}
+.pagination button{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.78rem;}
+.pagination button.active{background:var(--gold);color:#0a1628;font-weight:700;border-color:var(--gold);}
+.pagination button:hover:not(.active){border-color:var(--gold);}
+.pagination .pg-info{color:var(--text3);font-size:.78rem;padding:0 6px;}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -162,9 +177,10 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
       <button class="btn btn-gold" onclick="applyFilters()">🔍 Filter</button>
       <button class="btn btn-outline" onclick="clearFilters()">✕ ล้าง</button>
       <button class="btn btn-outline" style="font-size:.75rem;padding:6px 10px;color:#f87171;border-color:#f87171" onclick="if(confirm('ล้างข้อมูลที่ import ไว้ กลับเป็นข้อมูลเริ่มต้น?')){try{localStorage.removeItem('SR_SC_Dashboard_data');localStorage.removeItem('SR_SC_Dashboard_ts');}catch(e){}location.reload();}">🗑 ล้าง Import</button>
-      <button class="btn btn-pdf" <button class="btn btn-import" onclick="document.getElementById('xlsxInput').click()">📥 Import Excel</button>
+      <button class="btn btn-import" onclick="document.getElementById('xlsxInput').click()">📥 Import Excel</button>
       <button class="btn btn-import" style="background:linear-gradient(135deg,#1a5c2a,#2d8f4a)" onclick="saveAsHTML()">💾 Save JSON</button>
       <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)"><span id="importStatus"></span>
+      <button id="btnGSUpdate" class="btn-update" onclick="updateFromGoogleSheets()">🔄 Update จาก Google Sheets</button><span id="gsStatus"></span>
       <button class="btn btn-pdf" onclick="exportPDF()">📄 Export PDF</button>
     </div>
   </div>
@@ -204,7 +220,8 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
       <th class="th-sort" onclick="sortTable0('avgEng')" id="th0_avgEng">Avg Eng/โพสต์<span class="sort-arrow"></span></th>
     </tr></thead>
     <tbody id="tb0"></tbody>
-  </table></div>
+  </table>
+  </div><div id="pg0"></div>
 </div>
 
 <!-- TAB 1: COMPARE + TOP CONTENT -->
@@ -293,10 +310,172 @@ function _initDashboard(data){
   if(stEl){stEl.className="ok";stEl.style.display="inline-block";stEl.textContent="✅ โหลดข้อมูล "+RAW.length.toLocaleString("th-TH")+" records";}
 }
 // ดึงข้อมูลจาก JSON เสมอ (ไม่ใช้ localStorage เก็บ data)
-fetch("sr_data.json?v="+Date.now())
-  .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
-  .then(function(data){console.log("[SR] loaded from JSON:", data.length);_initDashboard(data);})
-  .catch(function(err){console.error("[SR] fetch failed:", err);});;
+
+// ============================================================
+// GOOGLE SHEETS LIVE CONNECTOR
+// ============================================================
+var GS_SHEET_ID = "1UdHuzJQTK4WL-dzC5r7I8dKv2p25NgcQjjMIQVBvVQA";
+// Tab GIDs — add more if you have multiple tabs:
+var GS_GIDS = [616835420];
+
+// Parse a single CSV text into records (same logic as importExcel)
+function parseCSVtoRecords(csvText, sheetName) {
+  var lines = csvText.split(/\r?\n/);
+  if (!lines.length) return [];
+  // Find header row (best score)
+  var headerIdx = 0, bestScore = 0;
+  for (var hi = 0; hi < Math.min(5, lines.length); hi++) {
+    var score = 0;
+    var rowStr = lines[hi];
+    ['ชื่อ','ประเภท','วันที่','การแสดงผล','การเข้าถึง','ลิงก์'].forEach(function(kw){
+      if (rowStr.indexOf(kw) >= 0) score++;
+    });
+    if (score > bestScore) { bestScore = score; headerIdx = hi; }
+  }
+  // Simple CSV parser (handles quoted fields)
+  function parseRow(line) {
+    var result = [], cur = '', inQ = false;
+    for (var ci = 0; ci < line.length; ci++) {
+      var ch = line[ci];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { result.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+    result.push(cur);
+    return result;
+  }
+  function si(v) { var n = parseInt(parseFloat(v) || 0); return isNaN(n) ? 0 : n; }
+  function ss(v) { return v !== null && v !== undefined ? String(v).trim() : ''; }
+  function parseDate(v) {
+    if (!v) return null;
+    var s = String(v).trim();
+    var m1 = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+    if (m1) return {y:+m1[1],m:+m1[2],d:+m1[3]};
+    var m2 = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+    if (m2) return {y:+m2[3],m:+m2[2],d:+m2[1]};
+    // Excel serial
+    var num = parseFloat(v);
+    if (!isNaN(num) && num > 40000) {
+      var dt = new Date(Math.round((num - 25569) * 86400 * 1000));
+      return {y:dt.getUTCFullYear(),m:dt.getUTCMonth()+1,d:dt.getUTCDate()};
+    }
+    return null;
+  }
+  var records = [];
+  for (var ri = headerIdx + 1; ri < lines.length; ri++) {
+    var row = parseRow(lines[ri]);
+    if (!row || row.length < 10) continue;
+    var dayV = parseFloat(row[1]) || 0, monthV = parseFloat(row[2]) || 0, yearV = parseFloat(row[3]) || 0;
+    var y, m, d;
+    if (dayV && monthV && yearV) {
+      y = Math.round(yearV); m = Math.round(monthV); d = Math.round(dayV);
+      if (y > 2500) y -= 543;
+    } else {
+      var pd2 = parseDate(row[0]);
+      if (!pd2) continue;
+      y = pd2.y; m = pd2.m; d = pd2.d;
+      if (y > 2500) y -= 543;
+    }
+    if (y < 2000 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31) continue;
+    var dateStr = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    records.push({
+      scPage: sheetName, date: dateStr,
+      month: y + '-' + String(m).padStart(2,'0'),
+      pageFull: ss(row[5]) || sheetName,
+      reach: si(row[21]), engagement: si(row[22]),
+      views: si(row[20]), viewOrganic: si(row[31]),
+      viewPaid: si(row[32]), postType: ss(row[14]),
+      title: ss(row[7]), link: ss(row[11]),
+      isShared: ss(row[13]),
+      reachOrganic: si(row[33]), reachPaid: si(row[34])
+    });
+  }
+  return records;
+}
+
+// CORS proxy helper — ใช้ allorigins.win เพราะ Google Sheets CSV ไม่มี CORS header
+function fetchSheetCSV(gid, sheetName) {
+  var csvUrl = 'https://docs.google.com/spreadsheets/d/' + GS_SHEET_ID + '/export?format=csv&gid=' + gid;
+  var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl);
+  return fetch(proxyUrl)
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(function(csv) { return parseCSVtoRecords(csv, sheetName || ('Tab_' + gid)); });
+}
+
+// Main update function — กดปุ่ม Update เรียก function นี้
+window.updateFromGoogleSheets = function() {
+  var btn = document.getElementById('btnGSUpdate');
+  var st  = document.getElementById('gsStatus');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังดึงข้อมูล...'; }
+  if (st)  { st.className = 'loading'; st.style.display = 'inline-block'; st.textContent = 'กำลังเชื่อมต่อ Google Sheets...'; }
+
+  var promises = GS_GIDS.map(function(gid, i) {
+    return fetchSheetCSV(gid, 'Tab' + (i + 1));
+  });
+
+  Promise.all(promises)
+    .then(function(results) {
+      var allRecords = [];
+      results.forEach(function(recs) { allRecords = allRecords.concat(recs); });
+      if (!allRecords.length) throw new Error('ไม่พบข้อมูล ตรวจสอบ Sheet ID หรือ GID');
+      _initDashboard(allRecords);
+      if (btn) { btn.disabled = false; btn.textContent = '🔄 Update จาก Google Sheets'; }
+      if (st)  { st.className = 'ok'; st.textContent = '✅ ' + allRecords.length.toLocaleString('th-TH') + ' records | อัปเดต ' + new Date().toLocaleTimeString('th-TH'); }
+    })
+    .catch(function(err) {
+      if (btn) { btn.disabled = false; btn.textContent = '🔄 Update จาก Google Sheets'; }
+      if (st)  { st.className = 'err'; st.textContent = '❌ ' + err.message; }
+      console.error('[GS] Error:', err);
+    });
+};
+// ---- END GOOGLE SHEETS CONNECTOR ----
+
+// ---- PAGINATION for overview table (tab0) ----------------------------------
+var PAGE_SIZE = 100;
+var currentPage0 = 1;
+var paginatedRows0 = [];
+
+function renderPaginatedTable0(rows) {
+  paginatedRows0 = rows;
+  currentPage0 = 1;
+  drawPage0();
+}
+function drawPage0() {
+  var start = (currentPage0 - 1) * PAGE_SIZE;
+  var pageRows = paginatedRows0.slice(start, start + PAGE_SIZE);
+  var tb = document.getElementById('tb0');
+  if (tb) tb.innerHTML = pageRows.join('');
+  renderPagination0();
+}
+function renderPagination0() {
+  var total = Math.ceil(paginatedRows0.length / PAGE_SIZE);
+  var el = document.getElementById('pg0');
+  if (!el) return;
+  if (total <= 1) { el.innerHTML = ''; return; }
+  var html = '<div class="pagination">';
+  html += '<button onclick="goPage0(1)" ' + (currentPage0===1?'disabled':'')+'>«</button>';
+  html += '<button onclick="goPage0(' + (currentPage0-1) + ')" '+(currentPage0===1?'disabled':'')+'>‹</button>';
+  var start = Math.max(1, currentPage0-2), end = Math.min(total, currentPage0+2);
+  for (var i=start; i<=end; i++) {
+    html += '<button onclick="goPage0('+i+')" class="'+(i===currentPage0?'active':'')+'">' + i + '</button>';
+  }
+  html += '<button onclick="goPage0(' + (currentPage0+1) + ')" '+(currentPage0===total?'disabled':'')+'>›</button>';
+  html += '<button onclick="goPage0('+total+')" '+(currentPage0===total?'disabled':'')+'>»</button>';
+  html += '<span class="pg-info">หน้า ' + currentPage0 + '/' + total + ' (' + paginatedRows0.length + ' เพจ)</span>';
+  html += '</div>';
+  el.innerHTML = html;
+}
+window.goPage0 = function(p) {
+  var total = Math.ceil(paginatedRows0.length / PAGE_SIZE);
+  if (p < 1 || p > total) return;
+  currentPage0 = p;
+  drawPage0();
+};
+// ---- END PAGINATION ----
+
+// Auto-load on page open
+updateFromGoogleSheets();
+
 // Init: disable date range inputs on load
 document.getElementById('fFrom').disabled=true;
 document.getElementById('fTo').disabled=true;
@@ -627,13 +806,13 @@ function renderTab0(){
   hBar('c0eng',pp,pp.map(function(p){return pd[p].eng;}),'Engagement');
   hBar('c0reach',pp,pp.map(function(p){return pd[p].reach;}),'\u0e01\u0e32\u0e23\u0e40\u0e02\u0e49\u0e32\u0e16\u0e36\u0e07');
 
-  // Table
-  var tb=document.getElementById('tb0');
-  tb.innerHTML=pp.map(function(p){
+  // Table (paginated)
+  var _rows0=pp.map(function(p){
     var x=pd[p];
     var ae=x.posts?Math.round(x.eng/x.posts):0;
     return '<tr><td>'+p+'</td><td>'+fmt(x.posts)+'</td><td>'+fmt(x.img)+'</td><td>'+fmt(x.vid)+'</td><td>'+fmt(x.shared)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.orgViews)+'</td><td>'+fmt(x.paidViews)+'</td><td>'+fmt(x.eng)+'</td><td>'+fmt(x.reach)+'</td><td>'+fmt(x.reachOrganic)+'</td><td>'+fmt(x.reachPaid)+'</td><td>'+fmt(ae)+'</td></tr>';
   }).join('');
+  renderPaginatedTable0(_rows0);
 }
 
 
@@ -687,11 +866,11 @@ window.sortTable0=function(col){
       return table0SortDir==='asc'?va-vb:vb-va;
     });
   }
-  var tb=document.getElementById('tb0');
-  tb.innerHTML=pp.map(function(p){
+  var _rows0s=pp.map(function(p){
     var x=pd[p];
     return '<tr><td>'+p+'</td><td>'+fmt(x.posts)+'</td><td>'+fmt(x.img)+'</td><td>'+fmt(x.vid)+'</td><td>'+fmt(x.shared)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.orgViews)+'</td><td>'+fmt(x.paidViews)+'</td><td>'+fmt(x.eng)+'</td><td>'+fmt(x.reach)+'</td><td>'+fmt(x.reachOrganic)+'</td><td>'+fmt(x.reachPaid)+'</td><td>'+fmt(x.avgEng)+'</td></tr>';
   }).join('');
+  renderPaginatedTable0(_rows0s);
 };
 
 // ── TAB 1: COMPARE ──────────────────────────────────────────────────────────
