@@ -840,17 +840,6 @@ window.exportPDF=function(){
   }).from(document.body).save();
 };
 
-var _ts=null;try{_ts=localStorage.getItem("BN_SC_Dashboard_ts");}catch(e){}
-if(_ts){
-  var _stEl=document.getElementById("importStatus");
-  if(_stEl){
-    _stEl.className="ok";
-    _stEl.style.display="inline-block";
-    _stEl.textContent="\u2705 ข้อมูลที่ import ล่าสุด: "+_ts+" ("+RAW.length.toLocaleString("th-TH")+" records)";
-  }
-}
-// Init
-renderTab0();
 })();
 </script>
 </body>
