@@ -268,6 +268,7 @@ var _embeddedData=[];
 var RAW=[];
 var FILTERED=[];
 var ALL_PAGES=[],ALL_MONTHS_RAW=[],ALL_YEARS=[];
+var MONTH_NAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function _initDashboard(data){
   RAW=data;
   ALL_PAGES=[...new Set(RAW.map(function(d){return d.scPage;}))] .sort();
