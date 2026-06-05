@@ -393,13 +393,31 @@ function parseCSVtoRecords(csvText, sheetName) {
   return records;
 }
 
-// CORS proxy helper — ใช้ allorigins.win เพราะ Google Sheets CSV ไม่มี CORS header
+// CORS proxy — ลอง corsproxy.io ก่อน ถ้าล้มเหลวลอง allorigins.win
 function fetchSheetCSV(gid, sheetName) {
   var csvUrl = 'https://docs.google.com/spreadsheets/d/' + GS_SHEET_ID + '/export?format=csv&gid=' + gid;
-  var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl);
-  return fetch(proxyUrl)
-    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-    .then(function(csv) { return parseCSVtoRecords(csv, sheetName || ('Tab_' + gid)); });
+  var proxies = [
+    'https://corsproxy.io/?' + encodeURIComponent(csvUrl),
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl),
+    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(csvUrl)
+  ];
+  function tryProxy(i) {
+    if (i >= proxies.length) return Promise.reject(new Error('Proxy ทั้งหมดล้มเหลว'));
+    return fetch(proxies[i])
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+      })
+      .then(function(csv) {
+        if (!csv || csv.length < 50) throw new Error('ข้อมูลว่าง');
+        return parseCSVtoRecords(csv, sheetName || ('Tab_' + gid));
+      })
+      .catch(function(err) {
+        console.warn('[GS] proxy[' + i + '] failed:', err.message, '— trying next...');
+        return tryProxy(i + 1);
+      });
+  }
+  return tryProxy(0);
 }
 
 // Main update function — กดปุ่ม Update เรียก function นี้
