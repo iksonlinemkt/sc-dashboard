@@ -283,7 +283,23 @@ function _initDashboard(data){
   ALL_YEARS=[...new Set(ALL_MONTHS_RAW.map(function(mo){return mo.split("-")[0];}))] .sort();
   FILTERED=RAW.slice();
   rebuildFilters();
+  rebuildCompareSelects();
   renderTab0();
+}
+function rebuildCompareSelects(){
+  ['cp1','cp2','cp3','cp4'].forEach(function(id,i){
+    var el=document.getElementById(id);
+    if(!el)return;
+    el.innerHTML='';
+    var none=document.createElement('option');
+    none.value='';none.text='- ไม่เลือก -';el.appendChild(none);
+    ALL_PAGES.forEach(function(p,pi){
+      var o=document.createElement('option');o.value=p;o.text=p;
+      if(i===0&&pi===0)o.selected=true;
+      if(i===1&&pi===1)o.selected=true;
+      el.appendChild(o);
+    });
+  });
 }
 // ── GAS URL (แก้ตรงนี้หลัง Deploy GAS) ──────────────────────
 // วิธีได้ URL: GAS Editor → Deploy → New deployment → Web app → Copy URL
@@ -325,17 +341,6 @@ document.querySelectorAll('#t0 .th-sort').forEach(function(th){
   if(sp)sp.textContent='⇅';
 });
 
-// Populate compare selects
-['cp1','cp2','cp3','cp4'].forEach(function(id,i){
-  var el=document.getElementById(id);
-  var none=document.createElement('option');none.value='';none.text='- \u0e44\u0e21\u0e48\u0e40\u0e25\u0e37\u0e2d\u0e01 -';el.appendChild(none);
-  ALL_PAGES.forEach(function(p,pi){
-    var o=document.createElement('option');o.value=p;o.text=p;
-    if(i===0&&pi===0)o.selected=true;
-    if(i===1&&pi===1)o.selected=true;
-    el.appendChild(o);
-  });
-});
 
 function getFiltered(){
   var pg=document.getElementById('fPage').value;
