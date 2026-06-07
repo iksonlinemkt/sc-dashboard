@@ -298,57 +298,21 @@ function loadData(forceRefresh) {
   status.textContent = '⏳ กำลังโหลดข้อมูล...';
   if (btn) { btn.disabled = true; label.textContent = 'กำลังโหลด...'; }
 
-  // ใช้ JSONP เพื่อแก้ปัญหา CORS กับ GAS
-  var callbackName = 'gasCallback_' + Date.now();
-  var script = document.createElement('script');
-  var timeout = setTimeout(function() {
-    // fallback: ลอง fetch ปกติ
-    delete window[callbackName];
-    document.body.removeChild(script);
-    fetchDirect(forceRefresh, status, btn, label);
-  }, 5000);
-
-  window[callbackName] = function(data) {
-    clearTimeout(timeout);
-    delete window[callbackName];
-    document.body.removeChild(script);
-    handleData(data, status, btn, label);
-  };
-
-  var url = GAS_URL + '?callback=' + callbackName + (forceRefresh ? '&refresh=1' : '') + '&t=' + Date.now();
-  script.src = url;
-  script.onerror = function() {
-    clearTimeout(timeout);
-    delete window[callbackName];
-    document.body.removeChild(script);
-    fetchDirect(forceRefresh, status, btn, label);
-  };
-  document.body.appendChild(script);
-}
-
-function fetchDirect(forceRefresh, status, btn, label) {
   var url = GAS_URL + (forceRefresh ? '?refresh=1&t=' : '?t=') + Date.now();
-  fetch(url, {redirect: 'follow'})
+  fetch(url)
     .then(function(r) { return r.json(); })
-    .then(function(data) { handleData(data, status, btn, label); })
+    .then(function(data) {
+      if (!Array.isArray(data)) throw new Error('ข้อมูลไม่ถูกต้อง');
+      _initDashboard(data);
+      status.className = 'ok';
+      status.textContent = '✅ ' + data.length.toLocaleString('th-TH') + ' records | อัปเดต ' + new Date().toLocaleTimeString('th-TH');
+      if (btn) { btn.disabled = false; label.textContent = 'Refresh ข้อมูล'; }
+    })
     .catch(function(err) {
       status.className = 'err';
-      status.textContent = '❌ โหลดไม่สำเร็จ: ' + err.message;
+      status.textContent = '❌ ' + err.message;
       if (btn) { btn.disabled = false; label.textContent = 'Refresh ข้อมูล'; }
     });
-}
-
-function handleData(data, status, btn, label) {
-  if (!data || data.error) {
-    status.className = 'err';
-    status.textContent = '❌ ' + (data ? data.error : 'ไม่มีข้อมูล');
-    if (btn) { btn.disabled = false; label.textContent = 'Refresh ข้อมูล'; }
-    return;
-  }
-  _initDashboard(data);
-  status.className = 'ok';
-  status.textContent = '✅ ' + data.length.toLocaleString('th-TH') + ' records | อัปเดต ' + new Date().toLocaleTimeString('th-TH');
-  if (btn) { btn.disabled = false; label.textContent = 'Refresh ข้อมูล'; }
 }
 
 loadData(false);
