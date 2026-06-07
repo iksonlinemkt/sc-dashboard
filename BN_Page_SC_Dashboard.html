@@ -543,7 +543,7 @@ function renderCompare(){
   var sel=['cp1','cp2','cp3','cp4'].map(function(id){return document.getElementById(id).value;}).filter(function(v){return v;});
   if(!sel.length)return;
   var stats=sel.map(function(p){
-    var dd=RAW.filter(function(r){return r.scPage===p;});
+    var dd=FILTERED.filter(function(r){return r.scPage===p;});
     var e=sum(dd,'engagement');
     return {page:p,posts:dd.length,views:sum(dd,'views'),eng:e,reach:sum(dd,'reach'),avgEng:dd.length?Math.round(e/dd.length):0};
   });
