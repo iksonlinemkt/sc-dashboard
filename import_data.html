@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📥 นำเข้าข้อมูล Facebook Insights</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sarabun',Arial,sans-serif;background:#18191A;color:#E4E6EB;min-height:100vh;padding:24px}
+h1{font-size:1.4rem;color:#E7F3FF;margin-bottom:6px}
+.sub{color:#B0B3B8;font-size:.85rem;margin-bottom:24px}
+.card{background:#242526;border:1px solid #3E4042;border-radius:12px;padding:24px;margin-bottom:16px;max-width:700px}
+.card h2{font-size:1rem;color:#1877F2;margin-bottom:16px;font-weight:700}
+label{display:block;font-size:.8rem;color:#1877F2;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+select,input[type=password],input[type=text]{width:100%;background:#3A3B3C;border:1px solid #3E4042;color:#E4E6EB;padding:10px 14px;border-radius:8px;font-size:.9rem}
+select:focus,input:focus{outline:none;border-color:#1877F2}
+.drop-zone{border:2px dashed #3E4042;border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;margin-top:8px}
+.drop-zone:hover,.drop-zone.drag{border-color:#1877F2;background:#1877F210}
+.drop-zone .icon{font-size:2.4rem;margin-bottom:8px}
+.drop-zone .hint{color:#B0B3B8;font-size:.85rem;margin-top:6px}
+.drop-zone.has-file{border-color:#3ECF8E;background:#3ECF8E10}
+.drop-zone.has-file .file-name{color:#3ECF8E;font-weight:700;font-size:.95rem}
+input[type=file]{display:none}
+.btn{border:none;padding:11px 28px;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:700;transition:all .18s;width:100%;margin-top:12px}
+.btn-primary{background:linear-gradient(135deg,#1877F2,#166FE5);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px #1877F250}
+.btn-primary:disabled{background:#555;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-success{background:linear-gradient(135deg,#3ECF8E,#2aad72);color:#fff}
+.btn-success:hover{transform:translateY(-1px);box-shadow:0 4px 16px #3ECF8E50}
+.btn-success:disabled{background:#555;cursor:not-allowed;transform:none;box-shadow:none}
+.preview{background:#1C1E21;border:1px solid #3E4042;border-radius:8px;padding:16px;margin-top:12px}
+.preview h3{font-size:.85rem;color:#B0B3B8;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:#242526;border-radius:8px;padding:10px;text-align:center}
+.stat .val{font-size:1.2rem;font-weight:bold;color:#E7F3FF}
+.stat .lbl{font-size:.72rem;color:#8A8D91;margin-top:2px}
+.sample-table{width:100%;border-collapse:collapse;font-size:.78rem}
+.sample-table th{background:#3A3B3C;padding:6px 8px;text-align:left;color:#B0B3B8;white-space:nowrap}
+.sample-table td{padding:5px 8px;border-bottom:1px solid #3E4042;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.log{background:#111;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;white-space:pre-wrap;max-height:220px;overflow-y:auto;margin-top:12px}
+.ok{color:#3ECF8E}.err{color:#F93A3A}.warn{color:#F0A500}
+.step{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;border-radius:8px;background:#1C1E21;font-size:.85rem}
+.step .num{background:#1877F2;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:bold;flex-shrink:0}
+.warn-box{background:#F0A50015;border:1px solid #F0A50050;border-radius:8px;padding:12px;margin-top:12px;font-size:.82rem;color:#F0A500}
+.hidden{display:none}
+.pin-wrap{max-width:700px;margin:80px auto;text-align:center}
+.pin-wrap .lock{font-size:3rem;margin-bottom:16px}
+.pin-wrap h2{color:#E7F3FF;margin-bottom:8px}
+.pin-wrap p{color:#B0B3B8;font-size:.85rem;margin-bottom:24px}
+.pin-wrap input{max-width:240px;text-align:center;font-size:1.2rem;letter-spacing:4px;margin:0 auto 16px;display:block}
+.pin-err{color:#F93A3A;font-size:.85rem;margin-top:8px;display:none}
+</style>
+</head>
+<body>
+
+<!-- PIN Screen -->
+<div id="pinScreen" class="pin-wrap">
+  <div class="lock">🔒</div>
+  <h2>ระบบนำเข้าข้อมูล</h2>
+  <p>กรุณาใส่รหัสเพื่อเข้าใช้งาน</p>
+  <input type="password" id="pinInput" placeholder="รหัส PIN" maxlength="20" onkeydown="if(event.key==='Enter')checkPin()">
+  <button class="btn btn-primary" style="max-width:240px;margin:0 auto" onclick="checkPin()">เข้าสู่ระบบ</button>
+  <div class="pin-err" id="pinErr">รหัสไม่ถูกต้อง กรุณาลองใหม่</div>
+</div>
+
+<!-- Main App (hidden until PIN ok) -->
+<div id="mainApp" class="hidden">
+<h1>📥 นำเข้าข้อมูล Facebook Insights</h1>
+<p class="sub">สำหรับพนักงาน — อัปโหลดไฟล์ CSV จาก Facebook เพื่อเพิ่มข้อมูลเดือนใหม่</p>
+
+<div class="card">
+  <h2>วิธีใช้</h2>
+  <div class="step"><div class="num">1</div>เลือกสาขาของคุณ</div>
+  <div class="step"><div class="num">2</div>ไป Facebook Page → Insights → Export Data → โพสต์ → ดาวน์โหลด CSV</div>
+  <div class="step"><div class="num">3</div>อัปโหลดไฟล์ที่นี่ แล้วกด "ตรวจสอบข้อมูล"</div>
+  <div class="step"><div class="num">4</div>ตรวจดู preview แล้วกด "บันทึกเข้าระบบ"</div>
+</div>
+
+<div class="card">
+  <h2>① เลือกสาขา</h2>
+  <label>สาขา</label>
+  <select id="branchSel">
+    <option value="">-- กรุณาเลือกสาขา --</option>
+    <option value="Branch">Branch (อีซูซุกรุงเทพเซลส์)</option>
+    <option value="SR">SR (ศรีนครินทร์)</option>
+    <option value="BN">BN (บางนา)</option>
+    <option value="BST">BST (บางเสาธง)</option>
+  </select>
+</div>
+
+<div class="card">
+  <h2>② อัปโหลดไฟล์ CSV</h2>
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <div class="icon">📄</div>
+    <div>คลิกเพื่อเลือกไฟล์ หรือลากมาวางที่นี่</div>
+    <div class="hint">รองรับ .csv จาก Facebook Insights</div>
+  </div>
+  <input type="file" id="fileInput" accept=".csv">
+  <button class="btn btn-primary" id="btnCheck" onclick="checkData()" disabled>🔍 ตรวจสอบข้อมูล</button>
+</div>
+
+<div class="card hidden" id="previewCard">
+  <h2>③ ตรวจสอบก่อนบันทึก</h2>
+  <div class="preview">
+    <h3>สรุปข้อมูลที่พบ</h3>
+    <div class="stat-grid" id="statGrid"></div>
+    <div class="warn-box" id="warnBox" style="display:none"></div>
+    <div style="overflow-x:auto;margin-top:12px">
+      <table class="sample-table" id="sampleTable"></table>
+    </div>
+  </div>
+  <button class="btn btn-success" id="btnUpload" onclick="uploadData()">✅ บันทึกเข้าระบบ</button>
+</div>
+
+<div class="card hidden" id="logCard">
+  <h2>ผลการบันทึก</h2>
+  <div class="log" id="logEl"></div>
+</div>
+</div><!-- end mainApp -->
+
+<script>
+var SUPABASE_URL='https://hcenlsbilqrtdstobigc.supabase.co';
+var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjZW5sc2JpbHFydGRzdG9iaWdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTQ1NDYsImV4cCI6MjA5NzMzMDU0Nn0.9ZgkBJzCbT9RuDOr1vRkbhVH0jgEIVDwE_f9HarGI3Q';
+var CORRECT_PIN='IKS2569';
+var parsedRows=[];
+
+function checkPin(){
+  var v=document.getElementById('pinInput').value.trim();
+  if(v===CORRECT_PIN){
+    document.getElementById('pinScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+  } else {
+    document.getElementById('pinErr').style.display='block';
+    document.getElementById('pinInput').value='';
+    document.getElementById('pinInput').focus();
+  }
+}
+
+// Drag & drop
+var dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',function(){dz.classList.remove('drag');});
+dz.addEventListener('drop',function(e){
+  e.preventDefault();dz.classList.remove('drag');
+  var f=e.dataTransfer.files[0];if(f)setFile(f);
+});
+document.getElementById('fileInput').addEventListener('change',function(){
+  if(this.files[0])setFile(this.files[0]);
+});
+
+function setFile(f){
+  dz.innerHTML='<div class="icon">✅</div><div class="file-name">'+f.name+'</div><div class="hint">'+Math.round(f.size/1024)+' KB — คลิกเพื่อเปลี่ยนไฟล์</div>';
+  dz.classList.add('has-file');
+  window._file=f;checkBtn();
+}
+function checkBtn(){
+  var ok=document.getElementById('branchSel').value&&window._file;
+  document.getElementById('btnCheck').disabled=!ok;
+}
+document.getElementById('branchSel').addEventListener('change',checkBtn);
+
+function parseCSV(text){
+  var lines=[];var cur='';var inQ=false;
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(c==='"'){inQ=!inQ;}
+    else if(c==='\n'&&!inQ){lines.push(cur);cur='';}
+    else{cur+=c;}
+  }
+  if(cur)lines.push(cur);
+  return lines.map(function(l){
+    var cells=[];var cell='';var inQ2=false;
+    for(var i=0;i<l.length;i++){
+      var c=l[i];
+      if(c==='"'){inQ2=!inQ2;}
+      else if(c===','&&!inQ2){cells.push(cell.trim());cell='';}
+      else{cell+=c;}
+    }
+    cells.push(cell.trim());return cells;
+  });
+}
+function safeInt(v){if(!v||v==='')return 0;var n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:Math.round(n);}
+function fixDate(day,month,year){
+  try{
+    var d=Math.round(parseFloat(day)),m=Math.round(parseFloat(month)),y=Math.round(parseFloat(year));
+    if(d<1||d>31||m<1||m>12||y<2020||y>2035)return null;
+    return y+'-'+(m<10?'0'+m:m)+'-'+(d<10?'0'+d:d);
+  }catch(e){return null;}
+}
+function findCol(h,n){for(var i=0;i<h.length;i++){if(h[i].trim()===n)return i;}return -1;}
+
+function checkData(){
+  if(!window._file)return;
+  var branch=document.getElementById('branchSel').value;
+  if(!branch){alert('กรุณาเลือกสาขาก่อน');return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var rows=parseCSV(e.target.result);
+    if(rows.length<2){alert('ไม่มีข้อมูลในไฟล์');return;}
+    var h=rows[0];
+    var iDay=findCol(h,'Day'),iMon=findCol(h,'Month'),iYr=findCol(h,'Year');
+    if(iDay<0){alert('ไม่ใช่ไฟล์ Facebook Insights (ไม่พบคอลัมน์ Day/Month/Year)');return;}
+    var iPage=findCol(h,'ชื่อเพจ'),iTitle=findCol(h,'ชื่อ'),iLink=findCol(h,'ลิงก์ถาวร'),iType=findCol(h,'ประเภทโพสต์');
+    var iV=findCol(h,'ยอดดู'),iR=findCol(h,'การเข้าถึง'),iE=findCol(h,'ความรู้สึก ความคิดเห็น และการแชร์');
+    var iRx=findCol(h,'ความรู้สึก'),iC=findCol(h,'ความคิดเห็น'),iS=findCol(h,'การแชร์'),iCl=findCol(h,'การคลิกทั้งหมด');
+    var iOrg=findCol(h,'ดูจาก โพสต์แบบออร์แกนิก'),iPd=findCol(h,'ดูจาก โพสต์ที่โปรโมท');
+    var parsed=[];var badDates=0;
+    for(var i=1;i<rows.length;i++){
+      var r=rows[i];if(!r||r.length<5||!r[0])continue;
+      var d=fixDate(r[iDay],r[iMon],r[iYr]);
+      if(!d){
+        var m2=Math.round(parseFloat(r[iMon])),y2=Math.round(parseFloat(r[iYr]));
+        if(m2>=1&&m2<=12&&y2>=2020&&y2<=2035){d=y2+'-'+(m2<10?'0'+m2:m2)+'-01';badDates++;}
+        else continue;
+      }
+      parsed.push({
+        sc_page:iPage>=0?(r[iPage]||''):'',date:d,month:d.substring(0,7),
+        views:safeInt(r[iV]),reach:safeInt(r[iR]),engagement:safeInt(r[iE]),
+        reactions:safeInt(r[iRx]),comments:safeInt(r[iC]),shares:safeInt(r[iS]),
+        clicks:safeInt(r[iCl]),view_organic:safeInt(r[iOrg]),view_paid:safeInt(r[iPd]),
+        post_type:iType>=0?(r[iType]||''):'',
+        title:iTitle>=0?(r[iTitle]||'').substring(0,500):'',
+        link:iLink>=0?(r[iLink]||''):'',branch:branch
+      });
+    }
+    if(!parsed.length){alert('ไม่พบข้อมูลในไฟล์');return;}
+    parsedRows=parsed;
+    var months=[...new Set(parsed.map(function(r){return r.month;}))].sort();
+    var pages=[...new Set(parsed.map(function(r){return r.sc_page;}))];
+    document.getElementById('statGrid').innerHTML=
+      stat(parsed.length,'แถวข้อมูล','📊')+stat(months.length,'เดือน','📅')+
+      stat(pages.length,'เพจ','📄')+stat(months.join(', '),'ช่วงเวลา','🗓️');
+    var wb=document.getElementById('warnBox');
+    if(badDates){wb.style.display='';wb.textContent='⚠️ พบ '+badDates+' แถวที่วันที่ผิดปกติ — ระบบแก้ให้อัตโนมัติ (ใช้วันที่ 1 ของเดือน)';}
+    else{wb.style.display='none';}
+    var cols=['date','sc_page','post_type','views','reach','engagement'];
+    var th=cols.map(function(c){return '<th>'+c+'</th>';}).join('');
+    var trs=parsed.slice(0,5).map(function(r){return '<tr>'+cols.map(function(c){return '<td title="'+r[c]+'">'+r[c]+'</td>';}).join('')+'</tr>';}).join('');
+    document.getElementById('sampleTable').innerHTML='<thead><tr>'+th+'</tr></thead><tbody>'+trs+'</tbody>';
+    document.getElementById('previewCard').classList.remove('hidden');
+    document.getElementById('previewCard').scrollIntoView({behavior:'smooth'});
+  };
+  reader.readAsText(window._file,'UTF-8');
+}
+function stat(val,lbl,icon){return '<div class="stat"><div class="val">'+icon+' '+val+'</div><div class="lbl">'+lbl+'</div></div>';}
+
+async function uploadData(){
+  if(!parsedRows.length)return;
+  document.getElementById('btnUpload').disabled=true;
+  document.getElementById('logCard').classList.remove('hidden');
+  document.getElementById('logCard').scrollIntoView({behavior:'smooth'});
+  var logEl=document.getElementById('logEl');
+  function log(msg,cls){var d=document.createElement('div');if(cls)d.className=cls;d.textContent=msg;logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
+  log('เริ่ม upload '+parsedRows.length+' records...');
+  var months=[...new Set(parsedRows.map(function(r){return r.month;}))];
+  var branch=parsedRows[0].branch;
+  log('สาขา: '+branch+' | เดือน: '+months.join(', '));
+  for(var i=0;i<months.length;i++){
+    var m=months[i];
+    try{
+      var delRes=await fetch(SUPABASE_URL+'/rest/v1/sc_posts?branch=eq.'+encodeURIComponent(branch)+'&month=eq.'+m,{
+        method:'DELETE',headers:{apikey:ANON_KEY,Authorization:'Bearer '+ANON_KEY,Prefer:'return=minimal'}
+      });
+      log('ลบข้อมูลเดือน '+m+' เดิม: '+(delRes.ok?'OK':'skip'),'warn');
+    }catch(e){log('ลบเก่า: '+e.message,'warn');}
+  }
+  var BATCH=200;var success=0;var failed=0;
+  for(var i=0;i<parsedRows.length;i+=BATCH){
+    var batch=parsedRows.slice(i,i+BATCH);
+    try{
+      var res=await fetch(SUPABASE_URL+'/rest/v1/sc_posts',{
+        method:'POST',
+        headers:{apikey:ANON_KEY,Authorization:'Bearer '+ANON_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},
+        body:JSON.stringify(batch)
+      });
+      if(!res.ok){var t=await res.text();throw new Error(res.status+': '+t.substring(0,200));}
+      success+=batch.length;
+      log('✓ Batch '+(Math.floor(i/BATCH)+1)+': '+batch.length+' rows (รวม '+success+'/'+parsedRows.length+')','ok');
+    }catch(e){failed+=batch.length;log('✗ ERROR: '+e.message,'err');}
+    await new Promise(function(r){setTimeout(r,150);});
+  }
+  log('');
+  if(failed===0){
+    log('🎉 บันทึกสำเร็จ! '+success+' records เข้าระบบแล้ว','ok');
+    log('Dashboard จะแสดงข้อมูลใหม่ทันทีเมื่อ refresh','ok');
+  }else{
+    log('⚠️ เสร็จ: '+success+' OK, '+failed+' failed','err');
+  }
+  document.getElementById('btnUpload').disabled=false;
+  document.getElementById('btnUpload').textContent='🔄 Upload อีกครั้ง';
+}
+</script>
+</body>
+</html>
