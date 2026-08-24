@@ -198,8 +198,8 @@ function checkData(){
     var rows=parseCSV(e.target.result);
     if(rows.length<2){alert('ไม่มีข้อมูลในไฟล์');return;}
     var h=rows[0];
-    var iDay=findCol(h,'Day'),iMon=findCol(h,'Month'),iYr=findCol(h,'Year');
-    if(iDay<0){alert('ไม่ใช่ไฟล์ Facebook Insights (ไม่พบคอลัมน์ Day/Month/Year)');return;}
+    var iDT=findCol(h,'เวลาที่เผยแพร่');
+    if(iDT<0){alert('ไม่ใช่ไฟล์ Facebook Insights (ไม่พบคอลัมน์ เวลาที่เผยแพร่)');return;}
     var iPage=findCol(h,'ชื่อเพจ'),iTitle=findCol(h,'ชื่อ'),iLink=findCol(h,'ลิงก์ถาวร'),iType=findCol(h,'ประเภทโพสต์');
     var iV=findCol(h,'ยอดดู'),iR=findCol(h,'การเข้าถึง'),iE=findCol(h,'ความรู้สึก ความคิดเห็น และการแชร์');
     var iRx=findCol(h,'ความรู้สึก'),iC=findCol(h,'ความคิดเห็น'),iS=findCol(h,'การแชร์'),iCl=findCol(h,'การคลิกทั้งหมด');
@@ -207,12 +207,17 @@ function checkData(){
     var parsed=[];var badDates=0;
     for(var i=1;i<rows.length;i++){
       var r=rows[i];if(!r||r.length<5||!r[0])continue;
-      var d=fixDate(r[iDay],r[iMon],r[iYr]);
-      if(!d){
-        var m2=Math.round(parseFloat(r[iMon])),y2=Math.round(parseFloat(r[iYr]));
-        if(m2>=1&&m2<=12&&y2>=2020&&y2<=2035){d=y2+'-'+(m2<10?'0'+m2:m2)+'-01';badDates++;}
-        else continue;
+      // parse "M/D/YYYY H:MM" → "YYYY-MM-DD"
+      var d=null;
+      var dtRaw=(r[iDT]||'').trim();
+      var dtParts=dtRaw.split(' ')[0].split('/');
+      if(dtParts.length===3){
+        var mo=parseInt(dtParts[0],10),dy=parseInt(dtParts[1],10),yr=parseInt(dtParts[2],10);
+        if(mo>=1&&mo<=12&&dy>=1&&dy<=31&&yr>=2020&&yr<=2035){
+          d=yr+'-'+(mo<10?'0'+mo:mo)+'-'+(dy<10?'0'+dy:dy);
+        }
       }
+      if(!d){badDates++;continue;}
       parsed.push({
         sc_page:iPage>=0?(r[iPage]||''):'',date:d,month:d.substring(0,7),
         views:safeInt(r[iV]),reach:safeInt(r[iR]),engagement:safeInt(r[iE]),
