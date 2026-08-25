@@ -183,7 +183,7 @@ function checkData(){
         var r=json[i];if(!r||!r[0])continue;
         var d=parseDate(r[iDT]);if(!d)continue;
         parsedRows.push({
-          sc_page:cleanStr(iPage>=0?r[iPage]:''),date:d,month:d.substring(0,7),
+          sc_page:cleanStr(iPage>=0&&r[iPage]?r[iPage]:sname),date:d,month:d.substring(0,7),
           views:safeInt(r[iV]),reach:safeInt(r[iR]),engagement:safeInt(r[iE]),
           reactions:safeInt(r[iRx]),comments:safeInt(r[iC]),shares:safeInt(r[iS]),
           clicks:safeInt(r[iCl]),view_organic:safeInt(r[iOrg]),view_paid:safeInt(r[iPd]),
