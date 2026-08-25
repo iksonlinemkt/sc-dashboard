@@ -330,8 +330,7 @@ function _initDashboard(data){
     _initDashboard(mapped);
   })
   .catch(function(err){console.error("[BN] Supabase fetch failed:",err);});
-})()
-  .catch(function(err){console.error("[BN] fetch failed:", err);});;
+})();
 // Init: disable date range inputs on load
 document.getElementById('fFrom').disabled=true;
 document.getElementById('fTo').disabled=true;
