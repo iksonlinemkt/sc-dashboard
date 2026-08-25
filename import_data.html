@@ -254,13 +254,10 @@ async function uploadData(){
   var branch=parsedRows[0].branch;
   var months=[...new Set(parsedRows.map(function(r){return r.month;}))];
   log('Dashboard: '+branch+' | '+parsedRows.length+' records | เดือน: '+months.join(', '));
-  for(var i=0;i<months.length;i++){
-    var m=months[i];
-    try{
-      var del=await fetch(SUPABASE_URL+'/rest/v1/sc_posts?branch=eq.'+encodeURIComponent(branch)+'&month=eq.'+m,{method:'DELETE',headers:{apikey:ANON_KEY,Authorization:'Bearer '+ANON_KEY,Prefer:'return=minimal'}});
-      log('ลบข้อมูลเดือน '+m+' เดิม: '+(del.ok?'OK':'skip'),'warn');
-    }catch(e){log('ลบ error: '+e.message,'err');}
-  }
+  try{
+    var del=await fetch(SUPABASE_URL+'/rest/v1/sc_posts?branch=eq.'+encodeURIComponent(branch),{method:'DELETE',headers:{apikey:ANON_KEY,Authorization:'Bearer '+ANON_KEY,Prefer:'return=minimal'}});
+    log('ลบข้อมูลเดิมทั้งหมดของ '+branch+': '+(del.ok?'OK':'error'),'warn');
+  }catch(e){log('ลบ error: '+e.message,'err');}
   var BATCH=200,ok=0,fail=0;
   for(var i=0;i<parsedRows.length;i+=BATCH){
     var batch=parsedRows.slice(i,i+BATCH);
