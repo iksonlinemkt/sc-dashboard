@@ -170,26 +170,55 @@ function checkData(){
     wb.SheetNames.forEach(function(sname){
       var ws=wb.Sheets[sname];
       var json=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false,dateNF:'MM/DD/YYYY HH:mm'});
-      if(json.length<2)return;
-      var h=json[0];
+      if(json.length<3)return;
+      // Find header row (check first 5 rows for known keywords)
+      var headerIdx=0;
+      for(var hi=0;hi<Math.min(5,json.length);hi++){
+        var rs=json[hi].map(function(c){return String(c||'');}).join('|');
+        if(rs.indexOf('เวลาที่เผยแพร่')>=0||rs.indexOf('ยอดดู')>=0||rs.indexOf('การเข้าถึง')>=0){headerIdx=hi;break;}
+      }
+      var h=json[headerIdx];
       var iDT=findCol(h,'เวลาที่เผยแพร่');
-      if(iDT<0)return;
-      var iPage=findCol(h,'ชื่อเพจ'),iTitle=findCol(h,'ชื่อ'),iLink=findCol(h,'ลิงก์ถาวร'),iType=findCol(h,'ประเภทโพสต์');
+      // useSplit: format with Day/Month/Year in separate columns (col[1]/col[2]/col[3])
+      var useSplit=(iDT<0);
+      if(useSplit){
+        // Verify split format by checking first data row has numeric day/month/year
+        var tr=json[headerIdx+1];
+        if(!tr||(!parseFloat(tr[1])&&!parseFloat(tr[2])&&!parseFloat(tr[3])))return;
+      }
+      var iTitle=findCol(h,'ชื่อ'),iLink=findCol(h,'ลิงก์ถาวร'),iType=findCol(h,'ประเภทโพสต์');
       var iV=findCol(h,'ยอดดู'),iR=findCol(h,'การเข้าถึง'),iE=findCol(h,'ความรู้สึก ความคิดเห็น และการแชร์');
       var iRx=findCol(h,'ความรู้สึก'),iC=findCol(h,'ความคิดเห็น'),iS=findCol(h,'การแชร์'),iCl=findCol(h,'การคลิกทั้งหมด');
       var iOrg=findCol(h,'ดูจาก โพสต์แบบออร์แกนิก'),iPd=findCol(h,'ดูจาก โพสต์ที่โปรโมท');
       var sheetRows=0;
-      for(var i=1;i<json.length;i++){
-        var r=json[i];if(!r||!r[0])continue;
-        var d=parseDate(r[iDT]);if(!d)continue;
+      for(var i=headerIdx+1;i<json.length;i++){
+        var r=json[i];if(!r||r.length<3)continue;
+        var d;
+        if(useSplit){
+          var dayV=parseFloat(r[1])||0,moV=parseFloat(r[2])||0,yrV=parseFloat(r[3])||0;
+          if(!dayV||!moV||!yrV)continue;
+          var yr=Math.round(yrV),mo=Math.round(moV),dy=Math.round(dayV);
+          if(yr>2500)yr-=543;
+          if(yr<2020||yr>2035||mo<1||mo>12||dy<1||dy>31)continue;
+          d=yr+'-'+String(mo).padStart(2,'0')+'-'+String(dy).padStart(2,'0');
+        }else{
+          d=parseDate(r[iDT]);if(!d)continue;
+        }
         parsedRows.push({
-          sc_page:cleanStr(iPage>=0&&r[iPage]?r[iPage]:sname),date:d,month:d.substring(0,7),
-          views:safeInt(r[iV]),reach:safeInt(r[iR]),engagement:safeInt(r[iE]),
-          reactions:safeInt(r[iRx]),comments:safeInt(r[iC]),shares:safeInt(r[iS]),
-          clicks:safeInt(r[iCl]),view_organic:safeInt(r[iOrg]),view_paid:safeInt(r[iPd]),
-          post_type:cleanStr(iType>=0?r[iType]:''),
-          title:cleanStr(iTitle>=0?r[iTitle]:'',500),
-          link:cleanStr(iLink>=0?r[iLink]:''),branch:branch
+          sc_page:cleanStr(sname),date:d,month:d.substring(0,7),
+          views:safeInt(useSplit?r[20]:r[iV]),
+          reach:safeInt(useSplit?r[21]:r[iR]),
+          engagement:safeInt(useSplit?r[22]:r[iE]),
+          reactions:safeInt(useSplit?r[23]:r[iRx]),
+          comments:safeInt(useSplit?r[24]:r[iC]),
+          shares:safeInt(useSplit?r[25]:r[iS]),
+          clicks:safeInt(useSplit?r[26]:r[iCl]),
+          view_organic:safeInt(useSplit?r[31]:r[iOrg]),
+          view_paid:safeInt(useSplit?r[32]:r[iPd]),
+          post_type:cleanStr(iType>=0?r[iType]:(useSplit?r[14]:'')),
+          title:cleanStr(iTitle>=0?r[iTitle]:(useSplit?r[7]:''),500),
+          link:cleanStr(iLink>=0?r[iLink]:(useSplit?r[11]:'')),
+          branch:branch
         });
         sheetRows++;
       }
