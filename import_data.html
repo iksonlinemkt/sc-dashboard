@@ -142,7 +142,7 @@ function checkBtn(){
 document.getElementById('branchSel').addEventListener('change',checkBtn);
 
 function safeInt(v){if(v===null||v===undefined||v==='')return 0;var n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:Math.round(n);}
-function cleanStr(v,max){if(v===null||v===undefined)return '';var s=String(v);s=s.replace(/[ -]/g,' ');s=s.replace(/[\uD800-\uDFFF]/g,'');s=s.trim();return max?s.substring(0,max):s;}
+function cleanStr(v,max){if(v===null||v===undefined)return '';var s=String(v),out='';for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);if(c>=32&&c!==127&&(c<0xD800||c>0xDFFF))out+=s[i];}return max?out.substring(0,max):out;}
 
 function parseDate(v){
   if(!v)return null;
