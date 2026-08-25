@@ -142,6 +142,7 @@ function checkBtn(){
 document.getElementById('branchSel').addEventListener('change',checkBtn);
 
 function safeInt(v){if(v===null||v===undefined||v==='')return 0;var n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:Math.round(n);}
+function cleanStr(v,max){if(v===null||v===undefined)return '';var s=String(v);s=s.replace(/[ -]/g,' ');s=s.replace(/[\uD800-\uDFFF]/g,'');s=s.trim();return max?s.substring(0,max):s;}
 
 function parseDate(v){
   if(!v)return null;
@@ -185,13 +186,13 @@ function checkData(){
         var r=json[i];if(!r||!r[0])continue;
         var d=parseDate(r[iDT]);if(!d)continue;
         parsedRows.push({
-          sc_page:iPage>=0?(r[iPage]||''):'',date:d,month:d.substring(0,7),
+          sc_page:cleanStr(iPage>=0?r[iPage]:''),date:d,month:d.substring(0,7),
           views:safeInt(r[iV]),reach:safeInt(r[iR]),engagement:safeInt(r[iE]),
           reactions:safeInt(r[iRx]),comments:safeInt(r[iC]),shares:safeInt(r[iS]),
           clicks:safeInt(r[iCl]),view_organic:safeInt(r[iOrg]),view_paid:safeInt(r[iPd]),
-          post_type:iType>=0?(r[iType]||''):'',
-          title:iTitle>=0?(String(r[iTitle]||'')).substring(0,500):'',
-          link:iLink>=0?(r[iLink]||''):'',branch:branch
+          post_type:cleanStr(iType>=0?r[iType]:''),
+          title:cleanStr(iTitle>=0?r[iTitle]:'',500),
+          link:cleanStr(iLink>=0?r[iLink]:''),branch:branch
         });
         sheetRows++;
       }
