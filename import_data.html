@@ -12,7 +12,10 @@ h1{font-size:1.4rem;color:#E7F3FF;margin-bottom:6px}
 .sub{color:#B0B3B8;font-size:.85rem;margin-bottom:24px}
 .card{background:#242526;border:1px solid #3E4042;border-radius:12px;padding:24px;margin-bottom:16px;max-width:760px}
 .card h2{font-size:1rem;color:#1877F2;margin-bottom:16px;font-weight:700}
-.drop-zone{border:2px dashed #3E4042;border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s}
+label{display:block;font-size:.8rem;color:#1877F2;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+select{width:100%;background:#3A3B3C;border:1px solid #3E4042;color:#E4E6EB;padding:10px 14px;border-radius:8px;font-size:.9rem}
+select:focus{outline:none;border-color:#1877F2}
+.drop-zone{border:2px dashed #3E4042;border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;margin-top:8px}
 .drop-zone:hover,.drop-zone.drag{border-color:#1877F2;background:#1877F210}
 .drop-zone .icon{font-size:2.4rem;margin-bottom:8px}
 .drop-zone.has-file{border-color:#3ECF8E;background:#3ECF8E10}
@@ -24,13 +27,16 @@ input[type=file]{display:none}
 .btn-primary:disabled{background:#555;cursor:not-allowed;transform:none}
 .btn-success{background:linear-gradient(135deg,#3ECF8E,#2aad72);color:#fff}
 .btn-success:disabled{background:#555;cursor:not-allowed}
-.sheet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:8px}
-.sheet-card{background:#1C1E21;border:1px solid #3E4042;border-radius:8px;padding:12px}
-.sheet-card .name{font-weight:700;color:#E7F3FF;font-size:.85rem;margin-bottom:4px}
-.sheet-card .branch{color:#1877F2;font-size:.75rem;margin-bottom:6px}
-.sheet-card .rows{color:#3ECF8E;font-size:.85rem}
-.sheet-card .months{color:#B0B3B8;font-size:.72rem;margin-top:2px}
-.sheet-card.skip{opacity:.4}
+.preview-box{background:#1C1E21;border:1px solid #3E4042;border-radius:8px;padding:16px;margin-top:12px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:#242526;border-radius:8px;padding:10px;text-align:center}
+.stat .val{font-size:1.15rem;font-weight:bold;color:#E7F3FF}
+.stat .lbl{font-size:.72rem;color:#8A8D91;margin-top:2px}
+.sheet-list{font-size:.8rem;color:#B0B3B8;margin-top:8px}
+.sheet-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #3E4042}
+.sheet-row:last-child{border:none}
+.sheet-row .sname{color:#E7F3FF}
+.sheet-row .scnt{color:#3ECF8E}
 .log{background:#111;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;white-space:pre-wrap;max-height:260px;overflow-y:auto;margin-top:12px}
 .ok{color:#3ECF8E}.err{color:#F93A3A}.warn{color:#F0A500}
 .step{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px 12px;border-radius:8px;background:#1C1E21;font-size:.85rem}
@@ -54,30 +60,48 @@ input[type=file]{display:none}
 
 <div id="mainApp" class="hidden">
 <h1>📥 นำเข้าข้อมูล Facebook Insights</h1>
-<p class="sub">อัปโหลดไฟล์ Excel (.xlsx) — ระบบจะอ่านทุกชีตและนำเข้าทุกสาขาอัตโนมัติ</p>
+<p class="sub">อัปโหลดไฟล์ Excel (.xlsx) — 1 ไฟล์ต่อสาขา แต่ละ Sheet = เพจเซลล์</p>
 
 <div class="card">
   <h2>วิธีใช้</h2>
-  <div class="step"><div class="num">1</div>ดาวน์โหลดข้อมูลจาก Facebook Insights ของทุกเพจ รวมใส่ไฟล์ Excel เดียว (แต่ละเพจ = 1 ชีต)</div>
-  <div class="step"><div class="num">2</div>อัปโหลดไฟล์ Excel ที่นี่</div>
-  <div class="step"><div class="num">3</div>ตรวจสอบ preview แล้วกด "บันทึกทั้งหมด"</div>
+  <div class="step"><div class="num">1</div>เลือก Dashboard ที่ต้องการนำเข้า (สาขา)</div>
+  <div class="step"><div class="num">2</div>อัปโหลด Excel ของสาขานั้น — แต่ละ Sheet = ข้อมูลเพจเซลล์แต่ละคน</div>
+  <div class="step"><div class="num">3</div>ตรวจสอบ preview แล้วกด "บันทึกเข้าระบบ"</div>
 </div>
 
 <div class="card">
-  <h2>① อัปโหลดไฟล์ Excel</h2>
+  <h2>① เลือก Dashboard (สาขา)</h2>
+  <label>Dashboard ปลายทาง</label>
+  <select id="branchSel">
+    <option value="">-- กรุณาเลือก Dashboard --</option>
+    <option value="Branch">Branch — เพจสาขาหลัก (อีซูซุกรุงเทพเซลส์)</option>
+    <option value="SR">SR — สาขาศรีนครินทร์</option>
+    <option value="BN">BN — สาขาบางนา</option>
+    <option value="BST">BST — สาขาบางเสาธง</option>
+    <option value="KS">KS — สาขารัชโยธิน</option>
+    <option value="MU-X SR">MU-X SR</option>
+    <option value="MU-X BST">MU-X BST</option>
+  </select>
+</div>
+
+<div class="card">
+  <h2>② อัปโหลดไฟล์ Excel</h2>
   <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
     <div class="icon">📊</div>
     <div>คลิกเพื่อเลือกไฟล์ หรือลากมาวางที่นี่</div>
-    <div style="color:#B0B3B8;font-size:.82rem;margin-top:6px">รองรับ .xlsx จาก Facebook Insights</div>
+    <div style="color:#B0B3B8;font-size:.82rem;margin-top:6px">รองรับ .xlsx — หลาย Sheet ได้</div>
   </div>
   <input type="file" id="fileInput" accept=".xlsx,.xls">
   <button class="btn btn-primary" id="btnCheck" onclick="checkData()" disabled>🔍 ตรวจสอบข้อมูล</button>
 </div>
 
 <div class="card hidden" id="previewCard">
-  <h2>② ตรวจสอบก่อนบันทึก</h2>
-  <div class="sheet-grid" id="sheetGrid"></div>
-  <button class="btn btn-success" id="btnUpload" onclick="uploadAll()">✅ บันทึกทั้งหมดเข้าระบบ</button>
+  <h2>③ ตรวจสอบก่อนบันทึก</h2>
+  <div class="preview-box">
+    <div class="stat-grid" id="statGrid"></div>
+    <div class="sheet-list" id="sheetList"></div>
+  </div>
+  <button class="btn btn-success" id="btnUpload" onclick="uploadData()">✅ บันทึกเข้าระบบ</button>
 </div>
 
 <div class="card hidden" id="logCard">
@@ -90,8 +114,7 @@ input[type=file]{display:none}
 var SUPABASE_URL='https://hcenlsbilqrtdstobigc.supabase.co';
 var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjZW5sc2JpbHFydGRzdG9iaWdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTQ1NDYsImV4cCI6MjA5NzMzMDU0Nn0.9ZgkBJzCbT9RuDOr1vRkbhVH0jgEIVDwE_f9HarGI3Q';
 var PIN='IKS2569';
-var SHEET_MAP={'อีซูซุกรุงเทพเซลส์':'Branch','SR':'SR','MU-X SR':'MU-X SR','BST':'BST','MU-X BST':'MU-X BST','BN':'BN','KS':'KS'};
-var allBranchData={};
+var parsedRows=[];
 
 function checkPin(){
   if(document.getElementById('pinInput').value.trim()===PIN){
@@ -111,70 +134,57 @@ document.getElementById('fileInput').addEventListener('change',function(){if(thi
 
 function setFile(f){
   dz.innerHTML='<div class="icon">✅</div><div class="fn">'+f.name+'</div><div style="color:#B0B3B8;font-size:.82rem;margin-top:4px">'+Math.round(f.size/1024)+' KB — คลิกเพื่อเปลี่ยนไฟล์</div>';
-  dz.classList.add('has-file');
-  window._file=f;
-  document.getElementById('btnCheck').disabled=false;
+  dz.classList.add('has-file');window._file=f;checkBtn();
 }
+function checkBtn(){
+  document.getElementById('btnCheck').disabled=!(document.getElementById('branchSel').value&&window._file);
+}
+document.getElementById('branchSel').addEventListener('change',checkBtn);
 
 function safeInt(v){if(v===null||v===undefined||v==='')return 0;var n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:Math.round(n);}
 
 function parseDate(v){
   if(!v)return null;
-  // JS Date object (from SheetJS cellDates)
   if(v instanceof Date){
     var y=v.getFullYear(),m=v.getMonth()+1,d=v.getDate();
     if(y<2020||y>2035)return null;
     return y+'-'+(m<10?'0'+m:m)+'-'+(d<10?'0'+d:d);
   }
-  // String "M/D/YYYY H:MM" or "MM/DD/YYYY"
-  var s=String(v).trim();
-  var datePart=s.split(' ')[0];
-  var parts=datePart.split('/');
-  if(parts.length===3){
-    var mo=parseInt(parts[0],10),dy=parseInt(parts[1],10),yr=parseInt(parts[2],10);
+  var s=String(v).trim(),dp=s.split(' ')[0],pts=dp.split('/');
+  if(pts.length===3){
+    var mo=parseInt(pts[0],10),dy=parseInt(pts[1],10),yr=parseInt(pts[2],10);
     if(mo>=1&&mo<=12&&dy>=1&&dy<=31&&yr>=2020&&yr<=2035)
       return yr+'-'+(mo<10?'0'+mo:mo)+'-'+(dy<10?'0'+dy:dy);
   }
   return null;
 }
-
-function findCol(h,name){for(var i=0;i<h.length;i++)if(h[i]&&String(h[i]).trim()===name)return i;return -1;}
+function findCol(h,n){for(var i=0;i<h.length;i++)if(h[i]&&String(h[i]).trim()===n)return i;return -1;}
 
 function checkData(){
   if(!window._file)return;
+  var branch=document.getElementById('branchSel').value;
+  if(!branch){alert('กรุณาเลือก Dashboard ก่อน');return;}
   var reader=new FileReader();
   reader.onload=function(e){
     var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
-    allBranchData={};
-    var grid=document.getElementById('sheetGrid');
-    grid.innerHTML='';
-    var found=0;
+    parsedRows=[];
+    var sheetSummary=[];
     wb.SheetNames.forEach(function(sname){
-      var branch=SHEET_MAP[sname];
-      var card=document.createElement('div');
-      card.className='sheet-card';
-      if(!branch){
-        card.classList.add('skip');
-        card.innerHTML='<div class="name">'+sname+'</div><div class="branch" style="color:#8A8D91">ข้าม (ไม่รู้จัก)</div>';
-        grid.appendChild(card);
-        return;
-      }
       var ws=wb.Sheets[sname];
       var json=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false,dateNF:'MM/DD/YYYY HH:mm'});
-      if(json.length<2){card.innerHTML='<div class="name">'+sname+'</div><div class="branch">'+branch+'</div><div class="rows err">ไม่มีข้อมูล</div>';grid.appendChild(card);return;}
+      if(json.length<2)return;
       var h=json[0];
-      var iDT=findCol(h,'เวลาที่เผยแพร่'),iPage=findCol(h,'ชื่อเพจ'),iTitle=findCol(h,'ชื่อ');
-      var iLink=findCol(h,'ลิงก์ถาวร'),iType=findCol(h,'ประเภทโพสต์');
+      var iDT=findCol(h,'เวลาที่เผยแพร่');
+      if(iDT<0)return;
+      var iPage=findCol(h,'ชื่อเพจ'),iTitle=findCol(h,'ชื่อ'),iLink=findCol(h,'ลิงก์ถาวร'),iType=findCol(h,'ประเภทโพสต์');
       var iV=findCol(h,'ยอดดู'),iR=findCol(h,'การเข้าถึง'),iE=findCol(h,'ความรู้สึก ความคิดเห็น และการแชร์');
       var iRx=findCol(h,'ความรู้สึก'),iC=findCol(h,'ความคิดเห็น'),iS=findCol(h,'การแชร์'),iCl=findCol(h,'การคลิกทั้งหมด');
       var iOrg=findCol(h,'ดูจาก โพสต์แบบออร์แกนิก'),iPd=findCol(h,'ดูจาก โพสต์ที่โปรโมท');
-      if(iDT<0){card.innerHTML='<div class="name">'+sname+'</div><div class="branch">'+branch+'</div><div class="rows err">ไม่พบคอลัมน์วันที่</div>';grid.appendChild(card);return;}
-      var parsed=[];var skip=0;
+      var sheetRows=0;
       for(var i=1;i<json.length;i++){
         var r=json[i];if(!r||!r[0])continue;
-        var d=parseDate(r[iDT]);
-        if(!d){skip++;continue;}
-        parsed.push({
+        var d=parseDate(r[iDT]);if(!d)continue;
+        parsedRows.push({
           sc_page:iPage>=0?(r[iPage]||''):'',date:d,month:d.substring(0,7),
           views:safeInt(r[iV]),reach:safeInt(r[iR]),engagement:safeInt(r[iE]),
           reactions:safeInt(r[iRx]),comments:safeInt(r[iC]),shares:safeInt(r[iS]),
@@ -183,62 +193,63 @@ function checkData(){
           title:iTitle>=0?(String(r[iTitle]||'')).substring(0,500):'',
           link:iLink>=0?(r[iLink]||''):'',branch:branch
         });
+        sheetRows++;
       }
-      allBranchData[branch]=parsed;
-      var months=[...new Set(parsed.map(function(x){return x.month;}))].sort();
-      card.innerHTML='<div class="name">'+sname+'</div><div class="branch">→ '+branch+'</div><div class="rows">'+parsed.length+' records'+(skip?' <span class="warn">(ข้าม '+skip+')</span>':'')+'</div><div class="months">'+months.join(', ')+'</div>';
-      grid.appendChild(card);
-      found++;
+      if(sheetRows>0)sheetSummary.push({name:sname,count:sheetRows});
     });
-    if(found>0){
-      document.getElementById('previewCard').classList.remove('hidden');
-      document.getElementById('previewCard').scrollIntoView({behavior:'smooth'});
-    }
+    if(!parsedRows.length){alert('ไม่พบข้อมูลในไฟล์');return;}
+    var months=[...new Set(parsedRows.map(function(r){return r.month;}))].sort();
+    var pages=[...new Set(parsedRows.map(function(r){return r.sc_page;}))];
+    document.getElementById('statGrid').innerHTML=
+      stat(parsedRows.length,'แถวทั้งหมด','📊')+
+      stat(sheetSummary.length,'Sheet (เพจเซลล์)','📋')+
+      stat(months.length,'เดือน','📅')+
+      stat(months.join(', '),'ช่วงเวลา','🗓️');
+    var sl=document.getElementById('sheetList');
+    sl.innerHTML='<div style="font-weight:700;color:#B0B3B8;margin-bottom:6px;font-size:.75rem;text-transform:uppercase">รายละเอียดแต่ละ Sheet</div>';
+    sheetSummary.forEach(function(s){
+      sl.innerHTML+='<div class="sheet-row"><span class="sname">'+s.name+'</span><span class="scnt">'+s.count+' records</span></div>';
+    });
+    document.getElementById('previewCard').classList.remove('hidden');
+    document.getElementById('previewCard').scrollIntoView({behavior:'smooth'});
   };
   reader.readAsArrayBuffer(window._file);
 }
+function stat(val,lbl,icon){return '<div class="stat"><div class="val">'+icon+' '+val+'</div><div class="lbl">'+lbl+'</div></div>';}
 
-async function uploadAll(){
+async function uploadData(){
+  if(!parsedRows.length)return;
   document.getElementById('btnUpload').disabled=true;
   document.getElementById('logCard').classList.remove('hidden');
   document.getElementById('logCard').scrollIntoView({behavior:'smooth'});
   var logEl=document.getElementById('logEl');
   function log(msg,cls){var d=document.createElement('div');if(cls)d.className=cls;d.textContent=msg;logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
-  var branches=Object.keys(allBranchData);
-  var totalOk=0,totalFail=0;
-  for(var bi=0;bi<branches.length;bi++){
-    var branch=branches[bi];
-    var rows=allBranchData[branch];
-    if(!rows||!rows.length){log('ข้าม '+branch+' (ไม่มีข้อมูล)','warn');continue;}
-    log('');
-    log('── '+branch+' ('+rows.length+' records) ──');
-    var months=[...new Set(rows.map(function(r){return r.month;}))];
-    for(var mi=0;mi<months.length;mi++){
-      var m=months[mi];
-      try{
-        var del=await fetch(SUPABASE_URL+'/rest/v1/sc_posts?branch=eq.'+encodeURIComponent(branch)+'&month=eq.'+m,{method:'DELETE',headers:{apikey:ANON_KEY,Authorization:'Bearer '+ANON_KEY,Prefer:'return=minimal'}});
-        log('  ลบเดือน '+m+' เดิม: '+(del.ok?'OK':'skip'),'warn');
-      }catch(e){log('  ลบ error: '+e.message,'err');}
-    }
-    var BATCH=200;var ok=0;var fail=0;
-    for(var i=0;i<rows.length;i+=BATCH){
-      var batch=rows.slice(i,i+BATCH);
-      try{
-        var res=await fetch(SUPABASE_URL+'/rest/v1/sc_posts',{method:'POST',headers:{apikey:ANON_KEY,Authorization:'Bearer '+ANON_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(batch)});
-        if(!res.ok){var t=await res.text();throw new Error(res.status+': '+t.substring(0,200));}
-        ok+=batch.length;
-        log('  ✓ Batch '+(Math.floor(i/BATCH)+1)+': '+batch.length+' rows ('+ok+'/'+rows.length+')','ok');
-      }catch(e){fail+=batch.length;log('  ✗ '+e.message,'err');}
-      await new Promise(function(r){setTimeout(r,120);});
-    }
-    totalOk+=ok;totalFail+=fail;
-    if(fail===0)log('  🎉 '+branch+' สำเร็จ!','ok');
-    else log('  ⚠️ '+branch+': '+ok+' OK, '+fail+' failed','err');
+  var branch=parsedRows[0].branch;
+  var months=[...new Set(parsedRows.map(function(r){return r.month;}))];
+  log('Dashboard: '+branch+' | '+parsedRows.length+' records | เดือน: '+months.join(', '));
+  for(var i=0;i<months.length;i++){
+    var m=months[i];
+    try{
+      var del=await fetch(SUPABASE_URL+'/rest/v1/sc_posts?branch=eq.'+encodeURIComponent(branch)+'&month=eq.'+m,{method:'DELETE',headers:{apikey:ANON_KEY,Authorization:'Bearer '+ANON_KEY,Prefer:'return=minimal'}});
+      log('ลบข้อมูลเดือน '+m+' เดิม: '+(del.ok?'OK':'skip'),'warn');
+    }catch(e){log('ลบ error: '+e.message,'err');}
+  }
+  var BATCH=200,ok=0,fail=0;
+  for(var i=0;i<parsedRows.length;i+=BATCH){
+    var batch=parsedRows.slice(i,i+BATCH);
+    try{
+      var res=await fetch(SUPABASE_URL+'/rest/v1/sc_posts',{method:'POST',headers:{apikey:ANON_KEY,Authorization:'Bearer '+ANON_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(batch)});
+      if(!res.ok){var t=await res.text();throw new Error(res.status+': '+t.substring(0,200));}
+      ok+=batch.length;
+      log('✓ Batch '+(Math.floor(i/BATCH)+1)+': '+batch.length+' rows ('+ok+'/'+parsedRows.length+')','ok');
+    }catch(e){fail+=batch.length;log('✗ '+e.message,'err');}
+    await new Promise(function(r){setTimeout(r,120);});
   }
   log('');
-  log(totalFail===0?'✅ บันทึกทั้งหมดสำเร็จ! '+totalOk+' records':'⚠️ สรุป: '+totalOk+' OK, '+totalFail+' failed',totalFail===0?'ok':'err');
-  log('Dashboard จะแสดงข้อมูลใหม่ทันทีเมื่อ Refresh','ok');
+  if(fail===0){log('🎉 บันทึกสำเร็จ! '+ok+' records เข้าระบบแล้ว','ok');log('Dashboard จะแสดงข้อมูลใหม่ทันทีเมื่อ Refresh','ok');}
+  else{log('⚠️ '+ok+' OK, '+fail+' failed','err');}
   document.getElementById('btnUpload').disabled=false;
+  document.getElementById('btnUpload').textContent='🔄 Upload อีกครั้ง';
 }
 </script>
 </body>
