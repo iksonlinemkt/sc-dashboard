@@ -9,8 +9,6 @@
 <title>SR Page SC Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -116,14 +114,13 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
   .kpi-val{font-size:1.2rem}
 }
 
-#dataStatus{font-size:.8rem;padding:4px 10px;border-radius:6px;background:#1a3d2b;color:#4ade80;display:none;}
-#dataStatus.loading{background:#1a2d3d;color:#48b8e0;display:inline-block;}
-#dataStatus.ok{background:#1a3d2b;color:#4ade80;display:inline-block;}
-#dataStatus.err{background:#3d1a1a;color:#f87171;display:inline-block;}
-.btn-refresh{background:linear-gradient(135deg,#1a5c8a,#2d8fd4);color:#fff;border:none;padding:7px 16px;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600;transition:all .18s;display:flex;align-items:center;gap:6px;}
-.btn-refresh:hover{box-shadow:0 4px 14px #2d8fd450;transform:scale(1.04);}
-.btn-refresh:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.btn-import{background:linear-gradient(135deg,#1a6eb5,#2d8fd4);color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;transition:opacity .2s;}
+.btn-import:hover{opacity:.85;}
+#importStatus{font-size:.8rem;padding:4px 10px;border-radius:6px;display:none;margin-left:8px;}
+#importStatus.ok{background:#1a3d2b;color:#4ade80;display:inline-block;}
+#importStatus.err{background:#3d1a1a;color:#f87171;display:inline-block;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -136,40 +133,38 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
 
 <!-- FILTER BAR -->
 <div class="filter-bar">
+  <div class="filter-mode" style="margin-bottom:10px">
+    <button id="btnModeMonthYear" class="active" onclick="setFilterMode('monthyear')">📅 เดือน/ปี</button>
+    <button id="btnModeDateRange" onclick="setFilterMode('daterange')">📌 ช่วงวันที่</button>
+  </div>
   <div class="filter-row">
     <div class="filter-group">
-      <label>SC Page</label>
+      <label>SC PAGE</label>
       <select id="fPage"><option value="">ั้งหมด</option></select>
     </div>
-    <div style="flex:1">
-      <div class="filter-mode">
-        <button id="btnModeMonthYear" class="active" onclick="setFilterMode('monthyear')">📅 เดือน/ปี</button>
-        <button id="btnModeDateRange" onclick="setFilterMode('daterange')">📌 ช่วงวันที่</button>
-      </div>
-      <div class="filter-row" style="gap:8px;flex-wrap:wrap;margin-top:4px">
-        <div class="filter-group" id="grpYear">
-          <label>ปี</label>
-          <select id="fYear"><option value="">ั้งหมด</option></select>
-        </div>
-        <div class="filter-group" id="grpMonth">
-          <label>เดือน</label>
-          <select id="fMonth"><option value="">ั้งหมด</option></select>
-        </div>
-        <div class="filter-group" id="grpFrom">
-          <label>วันที่ เริ่มต้น</label>
-          <input type="date" id="fFrom" disabled>
-        </div>
-        <div class="filter-group" id="grpTo">
-          <label>วันที่ สิ้นสุด</label>
-          <input type="date" id="fTo" disabled>
-        </div>
-      </div>
+    <div class="filter-group" id="grpYear">
+      <label>ปี</label>
+      <select id="fYear"><option value="">ั้งหมด</option></select>
+    </div>
+    <div class="filter-group" id="grpMonth">
+      <label>เดือน</label>
+      <select id="fMonth"><option value="">ั้งหมด</option></select>
+    </div>
+    <div class="filter-group" id="grpFrom">
+      <label>วันที่ เริ่มต้น</label>
+      <input type="date" id="fFrom" disabled>
+    </div>
+    <div class="filter-group" id="grpTo">
+      <label>วันที่ สิ้นสุด</label>
+      <input type="date" id="fTo" disabled>
     </div>
     <div class="btn-actions">
       <button class="btn btn-gold" onclick="applyFilters()">🔍 Filter</button>
       <button class="btn btn-outline" onclick="clearFilters()">✕ ล้าง</button>
-      <button class="btn-refresh" id="btnRefresh" onclick="loadData(true)">🔄 <span id="refreshLabel">Refresh ข้อมูล</span></button>
-      <span id="dataStatus"></span>
+      <button class="btn btn-outline" style="font-size:.75rem;padding:6px 10px;color:#f87171;border-color:#f87171" onclick="if(confirm('ล้างข้อมูลที่ import ไว้ กลับเป็นข้อมูลเริ่มต้น?')){try{localStorage.removeItem('SR_SC_Dashboard_data');localStorage.removeItem('SR_SC_Dashboard_ts');}catch(e){}location.reload();}">🗑 ล้าง Import</button>
+      <button class="btn btn-pdf" <button class="btn btn-import" onclick="document.getElementById('xlsxInput').click()">📥 Import Excel</button>
+      <button class="btn btn-import" style="background:linear-gradient(135deg,#1a5c2a,#2d8f4a)" onclick="saveAsHTML()">💾 Save JSON</button>
+      <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)"><span id="importStatus"></span>
       <button class="btn btn-pdf" onclick="exportPDF()">📄 Export PDF</button>
     </div>
   </div>
@@ -198,11 +193,14 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
       <th class="th-sort" onclick="sortTable0('posts')" id="th0_posts">โพสต์<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('img')" id="th0_img">รูปภาพ<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('vid')" id="th0_vid">วิดีโอ<span class="sort-arrow"></span></th>
+      <th class="th-sort" onclick="sortTable0('shared')" id="th0_shared">จำนวนแชร์<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('views')" id="th0_views">ยอดดู<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('orgViews')" id="th0_orgViews">Organic Views<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('paidViews')" id="th0_paidViews">Paid Views<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('eng')" id="th0_eng">Engagement<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('reach')" id="th0_reach">การเข้าถึง<span class="sort-arrow"></span></th>
+      <th class="th-sort" onclick="sortTable0('reachOrganic')" id="th0_reachOrganic">Organic Reach<span class="sort-arrow"></span></th>
+      <th class="th-sort" onclick="sortTable0('reachPaid')" id="th0_reachPaid">Paid Reach<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('avgEng')" id="th0_avgEng">Avg Eng/โพสต์<span class="sort-arrow"></span></th>
     </tr></thead>
     <tbody id="tb0"></tbody>
@@ -256,9 +254,16 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
 
 <!-- TAB 2: POSTING CONSISTENCY -->
 <div class="tab-content" id="tab2">
-  <p style="color:var(--text2);font-size:.85rem;margin-bottom:16px">
-    🔎 กราฟแสดงความสม่ำเสมอการโพสต์ เทียบวันที่ แยกตามประเภทโพสต์ (รูปภาพ vs วิดีโอ)
-  </p>
+  <div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+    <div class="filter-group">
+      <label>SC Page</label>
+      <select id="t2Page" onchange="renderTab2()">
+        <option value="">— ทั้งหมด —</option>
+      </select>
+    </div>
+    <p style="color:var(--text2);font-size:.82rem;padding-bottom:6px">🔎 กราฟ Engagement & ความสม่ำเสมอการโพสต์ รายวัน</p>
+  </div>
+  <div class="section-title" style="margin-top:4px">ความสม่ำเสมอการโพสต์ (รูปภาพ vs วิดีโอ)</div>
   <div class="posting-grid" id="postingCharts"></div>
 </div>
 
@@ -273,6 +278,26 @@ var charts={};
 var PALETTE=['#c8972a','#f5c842','#48b8e0','#e8a030','#2d8fd4','#ffd700','#1a6eb5','#ff9800'];
 var C={gold:'#c8972a',gold2:'#f5c842',blue:'#1a6eb5',blue2:'#2d8fd4',cyan:'#48b8e0',text:'#f0e6d0',text2:'#c8b88a',text3:'#a09070'};
 var filterMode='monthyear';
+window.setFilterMode=function(mode){
+  filterMode=mode;
+  var isRange=(mode==='daterange');
+  var grpY=document.getElementById('grpYear');
+  var grpM=document.getElementById('grpMonth');
+  var grpF=document.getElementById('grpFrom');
+  var grpT=document.getElementById('grpTo');
+  if(grpY)grpY.style.display=isRange?'none':'';
+  if(grpM)grpM.style.display=isRange?'none':'';
+  if(grpF)grpF.style.display=isRange?'':'none';
+  if(grpT)grpT.style.display=isRange?'':'none';
+  var fF=document.getElementById('fFrom');
+  var fT=document.getElementById('fTo');
+  if(fF)fF.disabled=!isRange;
+  if(fT)fT.disabled=!isRange;
+  var bMY=document.getElementById('btnModeMonthYear');
+  var bDR=document.getElementById('btnModeDateRange');
+  if(bMY){bMY.classList.toggle('active',!isRange);}
+  if(bDR){bDR.classList.toggle('active',isRange);}
+};
 var topSortOrganic='desc', topSortPaid='desc';
 var table0SortCol=null, table0SortDir='desc';
 var MONTH_NAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -283,55 +308,23 @@ function _initDashboard(data){
   ALL_YEARS=[...new Set(ALL_MONTHS_RAW.map(function(mo){return mo.split("-")[0];}))] .sort();
   FILTERED=RAW.slice();
   rebuildFilters();
-  rebuildCompareSelects();
   renderTab0();
+  var stEl=document.getElementById("importStatus");
+  if(stEl){stEl.className="ok";stEl.style.display="inline-block";stEl.textContent="✅ โหลดข้อมูล "+RAW.length.toLocaleString("th-TH")+" records";}
 }
-function rebuildCompareSelects(){
-  ['cp1','cp2','cp3','cp4'].forEach(function(id,i){
-    var el=document.getElementById(id);
-    if(!el)return;
-    el.innerHTML='';
-    var none=document.createElement('option');
-    none.value='';none.text='- ไม่เลือก -';el.appendChild(none);
-    ALL_PAGES.forEach(function(p,pi){
-      var o=document.createElement('option');o.value=p;o.text=p;
-      if(i===0&&pi===0)o.selected=true;
-      if(i===1&&pi===1)o.selected=true;
-      el.appendChild(o);
-    });
-  });
-}
-// ── GAS URL (แก้ตรงนี้หลัง Deploy GAS) ──────────────────────
-// วิธีได้ URL: GAS Editor → Deploy → New deployment → Web app → Copy URL
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbzTcid4_CNPxPaRTllo3-3nPZ_74ksP5FzFJNK3q_IgAIF12pW9LQnkaOupCiRXG6yF/exec';
-// ตัวอย่าง: 'https://script.google.com/macros/s/AKfycbx.../exec'
-
-function loadData(forceRefresh) {
-  var status = document.getElementById('dataStatus');
-  var btn = document.getElementById('btnRefresh');
-  var label = document.getElementById('refreshLabel');
-  status.className = 'loading';
-  status.textContent = '⏳ กำลังโหลดข้อมูล...';
-  if (btn) { btn.disabled = true; label.textContent = 'กำลังโหลด...'; }
-
-  var url = GAS_URL + (forceRefresh ? '?refresh=1&t=' : '?t=') + Date.now();
-  fetch(url)
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (!Array.isArray(data)) throw new Error('ข้อมูลไม่ถูกต้อง');
-      _initDashboard(data);
-      status.className = 'ok';
-      status.textContent = '✅ ' + data.length.toLocaleString('th-TH') + ' records | อัปเดต ' + new Date().toLocaleTimeString('th-TH');
-      if (btn) { btn.disabled = false; label.textContent = 'Refresh ข้อมูล'; }
-    })
-    .catch(function(err) {
-      status.className = 'err';
-      status.textContent = '❌ ' + err.message;
-      if (btn) { btn.disabled = false; label.textContent = 'Refresh ข้อมูล'; }
-    });
-}
-
-loadData(false);
+// ดึงข้อมูลจาก Supabase
+(function(){
+  var SUPABASE_URL='https://hcenlsbilqrtdstobigc.supabase.co';
+  var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjZW5sc2JpbHFydGRzdG9iaWdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTQ1NDYsImV4cCI6MjA5NzMzMDU0Nn0.9ZgkBJzCbT9RuDOr1vRkbhVH0jgEIVDwE_f9HarGI3Q';
+  fetch(SUPABASE_URL+'/rest/v1/sc_posts?branch=eq.SR&select=sc_page,date,month,views,reach,engagement,reactions,comments,shares,clicks,view_organic,view_paid,post_type,title,link&limit=10000&order=date.asc',{headers:{'apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY}})
+  .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+  .then(function(data){
+    var mapped=data.map(function(r){return{scPage:r.sc_page,date:r.date,month:r.month,views:r.views||0,reach:r.reach||0,engagement:r.engagement||0,reactions:r.reactions||0,comments:r.comments||0,shares:r.shares||0,clicks:r.clicks||0,viewOrganic:r.view_organic||0,viewPaid:r.view_paid||0,postType:r.post_type||'',title:r.title||'',link:r.link||''};});
+    console.log("[SR] loaded from Supabase:",mapped.length);
+    _initDashboard(mapped);
+  })
+  .catch(function(err){console.error("[SR] Supabase fetch failed:",err);});
+})();
 // Init: disable date range inputs on load
 document.getElementById('fFrom').disabled=true;
 document.getElementById('fTo').disabled=true;
@@ -341,6 +334,21 @@ document.querySelectorAll('#t0 .th-sort').forEach(function(th){
   if(sp)sp.textContent='⇅';
 });
 
+// Populate Tab2 SC filter
+var t2pEl=document.getElementById('t2Page');
+ALL_PAGES.forEach(function(p){var o=document.createElement('option');o.value=p;o.text=p;t2pEl.appendChild(o);});
+
+// Populate compare selects
+['cp1','cp2','cp3','cp4'].forEach(function(id,i){
+  var el=document.getElementById(id);
+  var none=document.createElement('option');none.value='';none.text='- \u0e44\u0e21\u0e48\u0e40\u0e25\u0e37\u0e2d\u0e01 -';el.appendChild(none);
+  ALL_PAGES.forEach(function(p,pi){
+    var o=document.createElement('option');o.value=p;o.text=p;
+    if(i===0&&pi===0)o.selected=true;
+    if(i===1&&pi===1)o.selected=true;
+    el.appendChild(o);
+  });
+});
 
 function getFiltered(){
   var pg=document.getElementById('fPage').value;
@@ -361,6 +369,157 @@ function getFiltered(){
   });
 }
 
+
+function rebuildFilters() {
+  var fpEl = document.getElementById('fPage');
+  if (fpEl) {
+    while (fpEl.options.length > 1) fpEl.remove(1);
+    ALL_PAGES.forEach(function(p) {
+      var o = document.createElement('option');
+      o.value = p; o.textContent = p; fpEl.appendChild(o);
+    });
+  }
+  var fyEl = document.getElementById('fYear');
+  if (fyEl) {
+    while (fyEl.options.length > 1) fyEl.remove(1);
+    ALL_YEARS.forEach(function(y) {
+      var o = document.createElement('option');
+      o.value = y; o.textContent = y; fyEl.appendChild(o);
+    });
+  }
+  var fmEl = document.getElementById('fMonth');
+  if (fmEl) {
+    while (fmEl.options.length > 1) fmEl.remove(1);
+    ALL_MONTHS_RAW.forEach(function(mo) {
+      var parts = mo.split('-');
+      var lbl = MONTH_NAMES[parseInt(parts[1])-1] + ' ' + parts[0];
+      var o = document.createElement('option');
+      o.value = mo; o.textContent = lbl; fmEl.appendChild(o);
+    });
+  }
+}
+
+window.importExcel = function(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var status = document.getElementById('importStatus');
+  status.className = ''; status.style.display = 'inline-block';
+  status.textContent = '⏳ กำลังโหลด...';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'array'});
+      var allRecords = [];
+      function si(v){var n=parseInt(parseFloat(v)||0);return isNaN(n)?0:n;}
+      function ss(v){return v!==null&&v!==undefined?String(v):'';}
+      function parseAnyDate(v) {
+        if (!v && v!==0) return null;
+        var s=String(v).trim();
+        var m1=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+        if(m1) return {y:+m1[1],m:+m1[2],d:+m1[3]};
+        var m2=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+        if(m2) return {y:+m2[3],m:+m2[2],d:+m2[1]};
+        var num=parseFloat(v);
+        if(!isNaN(num)&&num>40000){
+          var dt=new Date(Math.round((num-25569)*86400*1000));
+          return {y:dt.getUTCFullYear(),m:dt.getUTCMonth()+1,d:dt.getUTCDate()};
+        }
+        return null;
+      }
+      wb.SheetNames.forEach(function(sname) {
+        var ws = wb.Sheets[sname];
+        var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        if (!rows.length) return;
+        // BST: Day=col[1], Month=col[2], Year=col[3] (position-based)
+        // Try header-based first, fallback to position-based
+        var headerIdx=0, bestScore=0;
+        for (var hi=0; hi<Math.min(5,rows.length); hi++) {
+          var score=0;
+          var rowStr=rows[hi].map(function(c){return String(c||'');}).join('|');
+          ['ชื่อ','ประเภท','วันที่','การแสดงผล','การเข้าถึง','ลิงก์'].forEach(function(kw){
+            if(rowStr.indexOf(kw)>=0) score++;
+          });
+          if(score>bestScore){bestScore=score;headerIdx=hi;}
+        }
+        for (var ri = headerIdx+1; ri < rows.length; ri++) {
+          var row = rows[ri];
+          if (!row || row.length < 10) continue;
+          // Try date from col[1]/col[2]/col[3] (BST split format)
+          var dayV=parseFloat(row[1])||0, monthV=parseFloat(row[2])||0, yearV=parseFloat(row[3])||0;
+          var y,m,d;
+          if (dayV && monthV && yearV) {
+            y=Math.round(yearV); m=Math.round(monthV); d=Math.round(dayV);
+            if(y>2500) y-=543;
+          } else {
+            // Fallback: try col[0] as full date
+            var pd=parseAnyDate(row[0]);
+            if(!pd) continue;
+            y=pd.y; m=pd.m; d=pd.d;
+            if(y>2500) y-=543;
+          }
+          if(y<2000||y>2100||m<1||m>12||d<1||d>31) continue;
+          var dateStr=y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+          allRecords.push({
+            scPage:sname, date:dateStr,
+            month:y+'-'+String(m).padStart(2,'0'),
+            pageFull:ss(row[5])||sname,
+            reach:si(row[21]), engagement:si(row[22]),
+            views:si(row[20]), viewOrganic:si(row[31]),
+            viewPaid:si(row[32]), postType:ss(row[14]),
+            title:ss(row[7]), link:ss(row[11]),
+            isShared:ss(row[13]),
+            reachOrganic:si(row[33]), reachPaid:si(row[34])
+          });
+        }
+      });
+      if (!allRecords.length) {
+        var wb2=XLSX.read(e.target.result,{type:'array'});
+        var ws2=wb2.Sheets[wb2.SheetNames[0]];
+        var rows2=XLSX.utils.sheet_to_json(ws2,{header:1,defval:''});
+        var headerSample=rows2.slice(0,3).map(function(r){return r.slice(0,6).join(' | ');}).join(' /// ');
+        status.className='err';
+        status.textContent='❌ ไม่พบข้อมูล — Headers: '+headerSample.substring(0,150);
+        input.value=''; return;
+      }
+            RAW=allRecords;
+      ALL_PAGES=[...new Set(RAW.map(function(d){return d.scPage;}))].sort();
+      ALL_MONTHS_RAW=[...new Set(RAW.map(function(d){return d.month;}))].sort();
+      ALL_YEARS=[...new Set(ALL_MONTHS_RAW.map(function(mo){return mo.split('-')[0];}))].sort();
+      // Reset sort state
+      topSortOrganic='desc'; topSortPaid='desc';
+      table0SortCol=null; table0SortDir='desc';
+      // Rebuild filter dropdowns
+      rebuildFilters();
+      // FORCE reset all filter dropdowns to blank (ทั้งหมด)
+      var _ids=['fPage','fYear','fMonth','fFrom','fTo'];
+      for(var _i=0;_i<_ids.length;_i++){
+        var _el=document.getElementById(_ids[_i]);
+        if(_el){_el.value='';_el.selectedIndex=0;_el.disabled=false;}
+      }
+      // Set filterMode directly
+      filterMode='monthyear';
+      var _ym=document.getElementById('btnModeMonthYear');
+      var _dr=document.getElementById('btnModeDateRange');
+      if(_ym) _ym.classList.add('active');
+      if(_dr) _dr.classList.remove('active');
+      // Set FILTERED to ALL data
+      FILTERED=RAW.slice();
+      // Destroy all charts and re-render
+      Object.keys(charts).forEach(function(id){if(charts[id]){charts[id].destroy();delete charts[id];}});
+      renderTab0();
+      // Status message with month breakdown
+      var monthCounts={};
+      allRecords.forEach(function(r){monthCounts[r.month]=(monthCounts[r.month]||0)+1;});
+      var monthList=Object.keys(monthCounts).sort().map(function(k){return k+':'+monthCounts[k];}).join(', ');
+      try{
+      }catch(e){}
+      status.className='ok';
+      status.textContent='\u2705 '+allRecords.length.toLocaleString('th-TH')+' records | '+wb.SheetNames.length+' sheets | '+monthList;
+      } catch(err){status.className='err';status.textContent='❌ Error: '+err.message;}
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
 
 function rebuildFilters() {
   var fpEl = document.getElementById('fPage');
@@ -393,7 +552,26 @@ function rebuildFilters() {
       o.value = mo; o.textContent = lbl; fmEl.appendChild(o);
     });
   }
+};
+// ── END IMPORT EXCEL ────────────────────────────
+
+
+// ── SAVE AS HTML (Embed data + Download) ────────────────────────────────────
+function saveAsHTML() {
+  if (!RAW || !RAW.length) { alert("ไม่มีข้อมูล กรุณา Import Excel ก่อน"); return; }
+  var filename = "sr_data.json";
+  var stEl = document.getElementById("importStatus");
+  try {
+    var blob = new Blob([JSON.stringify(RAW, null, 0)], {type:"application/json;charset=utf-8"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    if(stEl){stEl.className="ok";stEl.style.display="inline-block";stEl.textContent="💾 บันทึก "+filename+" สำเร็จ พร้อม push GitHub";}
+  } catch(err){ alert("Error: "+err.message); }
 }
+// ── END SAVE AS HTML ─────────────────────────────────────────────────────────
 
 window.applyFilters=function(){FILTERED=getFiltered();renderAll();};
 window.clearFilters=function(){
@@ -427,7 +605,7 @@ function renderTab0(){
   var d=FILTERED;
   var totalPosts=d.length;
   var totalViews=sum(d,'views');
-  var totalEng=sum(d,'reactions')+sum(d,'comments')+sum(d,'shares');
+  var totalEng=sum(d,'engagement');
   var totalReach=sum(d,'reach');
   var avgEng=totalPosts?Math.round(totalEng/totalPosts):0;
   var totalImg=d.filter(function(r){return r.postType==='\u0e23\u0e39\u0e1b\u0e20\u0e32\u0e1e';}).length;
@@ -452,15 +630,18 @@ function renderTab0(){
 
   // Per-page aggregates
   var pd={};
-  ALL_PAGES.forEach(function(p){pd[p]={posts:0,views:0,eng:0,reach:0,img:0,vid:0,orgViews:0,paidViews:0};});
+  ALL_PAGES.forEach(function(p){pd[p]={posts:0,views:0,eng:0,reach:0,img:0,vid:0,orgViews:0,paidViews:0,reachOrganic:0,reachPaid:0,shared:0};});
   d.forEach(function(r){
     if(!pd[r.scPage])return;
     pd[r.scPage].posts++;
     pd[r.scPage].views+=+r.views||0;
-    pd[r.scPage].eng+=(+r.engagement||0);
+    pd[r.scPage].eng+=+r.engagement||0;
     pd[r.scPage].reach+=+r.reach||0;
     pd[r.scPage].orgViews+=+r.viewOrganic||0;
     pd[r.scPage].paidViews+=+r.viewPaid||0;
+    pd[r.scPage].reachOrganic+=+r.reachOrganic||0;
+    pd[r.scPage].reachPaid+=+r.reachPaid||0;
+    pd[r.scPage].shared+=+r.isShared||0;
     if(r.postType==='\u0e23\u0e39\u0e1b\u0e20\u0e32\u0e1e')pd[r.scPage].img++;
     if(r.postType==='\u0e27\u0e34\u0e14\u0e35\u0e42\u0e2d')pd[r.scPage].vid++;
   });
@@ -479,7 +660,7 @@ function renderTab0(){
   tb.innerHTML=pp.map(function(p){
     var x=pd[p];
     var ae=x.posts?Math.round(x.eng/x.posts):0;
-    return '<tr><td>'+p+'</td><td>'+fmt(x.posts)+'</td><td>'+fmt(x.img)+'</td><td>'+fmt(x.vid)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.orgViews)+'</td><td>'+fmt(x.paidViews)+'</td><td>'+fmt(x.eng)+'</td><td>'+fmt(x.reach)+'</td><td>'+fmt(ae)+'</td></tr>';
+    return '<tr><td>'+p+'</td><td>'+fmt(x.posts)+'</td><td>'+fmt(x.img)+'</td><td>'+fmt(x.vid)+'</td><td>'+fmt(x.shared)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.orgViews)+'</td><td>'+fmt(x.paidViews)+'</td><td>'+fmt(x.eng)+'</td><td>'+fmt(x.reach)+'</td><td>'+fmt(x.reachOrganic)+'</td><td>'+fmt(x.reachPaid)+'</td><td>'+fmt(ae)+'</td></tr>';
   }).join('');
 }
 
@@ -507,15 +688,18 @@ window.sortTable0=function(col){
   // Rebuild per-page data
   var d=FILTERED;
   var pd={};
-  ALL_PAGES.forEach(function(p){pd[p]={posts:0,views:0,eng:0,reach:0,img:0,vid:0,orgViews:0,paidViews:0};});
+  ALL_PAGES.forEach(function(p){pd[p]={posts:0,views:0,eng:0,reach:0,img:0,vid:0,orgViews:0,paidViews:0,reachOrganic:0,reachPaid:0,shared:0};});
   d.forEach(function(r){
     if(!pd[r.scPage])return;
     pd[r.scPage].posts++;
     pd[r.scPage].views+=+r.views||0;
-    pd[r.scPage].eng+=(+r.engagement||0);
+    pd[r.scPage].eng+=+r.engagement||0;
     pd[r.scPage].reach+=+r.reach||0;
     pd[r.scPage].orgViews+=+r.viewOrganic||0;
     pd[r.scPage].paidViews+=+r.viewPaid||0;
+    pd[r.scPage].reachOrganic+=+r.reachOrganic||0;
+    pd[r.scPage].reachPaid+=+r.reachPaid||0;
+    pd[r.scPage].shared+=+r.isShared||0;
     if(r.postType==='รูปภาพ')pd[r.scPage].img++;
     if(r.postType==='วิดีโอ')pd[r.scPage].vid++;
   });
@@ -534,7 +718,7 @@ window.sortTable0=function(col){
   var tb=document.getElementById('tb0');
   tb.innerHTML=pp.map(function(p){
     var x=pd[p];
-    return '<tr><td>'+p+'</td><td>'+fmt(x.posts)+'</td><td>'+fmt(x.img)+'</td><td>'+fmt(x.vid)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.orgViews)+'</td><td>'+fmt(x.paidViews)+'</td><td>'+fmt(x.eng)+'</td><td>'+fmt(x.reach)+'</td><td>'+fmt(x.avgEng)+'</td></tr>';
+    return '<tr><td>'+p+'</td><td>'+fmt(x.posts)+'</td><td>'+fmt(x.img)+'</td><td>'+fmt(x.vid)+'</td><td>'+fmt(x.shared)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.orgViews)+'</td><td>'+fmt(x.paidViews)+'</td><td>'+fmt(x.eng)+'</td><td>'+fmt(x.reach)+'</td><td>'+fmt(x.reachOrganic)+'</td><td>'+fmt(x.reachPaid)+'</td><td>'+fmt(x.avgEng)+'</td></tr>';
   }).join('');
 };
 
@@ -584,10 +768,18 @@ function renderTopTable(type,dir){
   }).slice(0,10);
   var tb=document.getElementById(tbId);
   tb.innerHTML=sorted.length?sorted.map(function(r,i){
-    var lnk=r.link?'<a href="'+r.link+'" target="_blank" style="color:'+C.cyan+';font-size:.75rem">\ud83d\udd17</a>':'-';
+    var lnk=r.link?'<a href="'+r.link+'" target="_blank" style="color:'+C.cyan+';font-size:.75rem">🔗</a>':'-';
     var ttl=r.title?r.title.substring(0,50)+'...':'-';
-    return '<tr><td style="color:'+C.gold+';font-weight:bold">'+(i+1)+'</td><td title="'+r.title+'">'+ttl+'</td><td>'+r.scPage+'</td><td style="color:'+C.gold2+';font-weight:bold">'+fmt(r[key])+'</td><td style="color:#a8edda;font-weight:bold">'+fmt(+r.engagement||0)+'</td><td>'+r.date+'</td><td>'+lnk+'</td></tr>';
-  }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">\u0e44\u0e21\u0e48\u0e21\u0e35\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25</td></tr>';
+    return '<tr>'
+      +'<td style="color:'+C.gold+';font-weight:bold">'+(i+1)+'</td>'
+      +'<td title="'+r.title+'">'+ttl+'</td>'
+      +'<td>'+r.scPage+'</td>'
+      +'<td style="color:'+C.gold2+';font-weight:bold">'+fmt(r[key])+'</td>'
+      +'<td style="color:#a8edda;font-weight:bold">'+fmt(+r.engagement||0)+'</td>'
+      +'<td>'+r.date+'</td>'
+      +'<td>'+lnk+'</td>'
+      +'</tr>';
+  }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">ไม่มีข้อมูล</td></tr>';
 }
 
 window.sortTop=function(type,dir){
