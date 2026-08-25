@@ -307,6 +307,16 @@ function _initDashboard(data){
   ALL_MONTHS_RAW=[...new Set(RAW.map(function(d){return d.month;}))] .sort();
   ALL_YEARS=[...new Set(ALL_MONTHS_RAW.map(function(mo){return mo.split("-")[0];}))] .sort();
   FILTERED=RAW.slice();
+  ["cp1","cp2","cp3","cp4"].forEach(function(id,i){
+    var el=document.getElementById(id);if(!el)return;
+    el.innerHTML="<option value="">- ไม่เลือก -</option>";
+    ALL_PAGES.forEach(function(p,pi){
+      var o=document.createElement("option");o.value=p;o.text=p;
+      if(i===0&&pi===0)o.selected=true;
+      if(i===1&&pi===1)o.selected=true;
+      el.appendChild(o);
+    });
+  });
   rebuildFilters();
   renderTab0();
   var stEl=document.getElementById("importStatus");
