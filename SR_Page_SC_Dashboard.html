@@ -321,7 +321,7 @@ function _initDashboard(data){
 }
 // ดึงข้อมูลจาก ikssa.io API
 (function(){
-  fetch('https://ikssa.io/api/sc_posts.php?branch=SR&order=asc')
+  fetch('https://api.ikssa.io/api/sc_posts.php?branch=SR&order=asc')
   .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
   .then(function(data){
     var mapped=data.map(function(r){return{scPage:r.sc_page,date:r.date,month:r.month,views:r.views||0,reach:r.reach||0,engagement:r.engagement||0,reactions:r.reactions||0,comments:r.comments||0,shares:r.shares||0,clicks:r.clicks||0,viewOrganic:r.view_organic||0,viewPaid:r.view_paid||0,postType:r.post_type||'',title:r.title||'',link:r.link||''};}); 
