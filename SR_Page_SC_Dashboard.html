@@ -319,18 +319,16 @@ function _initDashboard(data){
   var stEl=document.getElementById("importStatus");
   if(stEl){stEl.className="ok";stEl.style.display="inline-block";stEl.textContent="✅ โหลดข้อมูล "+RAW.length.toLocaleString("th-TH")+" records";}
 }
-// ดึงข้อมูลจาก Supabase
+// ดึงข้อมูลจาก ikssa.io API
 (function(){
-  var SUPABASE_URL='https://hcenlsbilqrtdstobigc.supabase.co';
-  var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjZW5sc2JpbHFydGRzdG9iaWdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NTQ1NDYsImV4cCI6MjA5NzMzMDU0Nn0.9ZgkBJzCbT9RuDOr1vRkbhVH0jgEIVDwE_f9HarGI3Q';
-  fetch(SUPABASE_URL+'/rest/v1/sc_posts?branch=eq.SR&select=sc_page,date,month,views,reach,engagement,reactions,comments,shares,clicks,view_organic,view_paid,post_type,title,link&limit=10000&order=date.asc',{headers:{'apikey':ANON_KEY,'Authorization':'Bearer '+ANON_KEY}})
+  fetch('https://ikssa.io/api/sc_posts.php?branch=SR&order=asc')
   .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
   .then(function(data){
-    var mapped=data.map(function(r){return{scPage:r.sc_page,date:r.date,month:r.month,views:r.views||0,reach:r.reach||0,engagement:r.engagement||0,reactions:r.reactions||0,comments:r.comments||0,shares:r.shares||0,clicks:r.clicks||0,viewOrganic:r.view_organic||0,viewPaid:r.view_paid||0,postType:r.post_type||'',title:r.title||'',link:r.link||''};});
-    console.log("[SR] loaded from Supabase:",mapped.length);
+    var mapped=data.map(function(r){return{scPage:r.sc_page,date:r.date,month:r.month,views:r.views||0,reach:r.reach||0,engagement:r.engagement||0,reactions:r.reactions||0,comments:r.comments||0,shares:r.shares||0,clicks:r.clicks||0,viewOrganic:r.view_organic||0,viewPaid:r.view_paid||0,postType:r.post_type||'',title:r.title||'',link:r.link||''};}); 
+    console.log("[SR] loaded from ikssa.io:",mapped.length);
     _initDashboard(mapped);
   })
-  .catch(function(err){console.error("[SR] Supabase fetch failed:",err);});
+  .catch(function(err){console.error("[SR] API fetch failed:",err);});
 })();
 // Init: disable date range inputs on load
 document.getElementById('fFrom').disabled=true;
