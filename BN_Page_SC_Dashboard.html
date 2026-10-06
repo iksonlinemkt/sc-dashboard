@@ -466,6 +466,7 @@ window.importExcel = function(input) {
             month:y+'-'+String(m).padStart(2,'0'),
             pageFull:ss(row[5])||sname,
             reach:si(row[21]), engagement:si(row[22]),
+            reactions:si(row[23]), comments:si(row[24]), shares:si(row[25]), clicks:si(row[26]),
             views:si(row[20]), viewOrganic:si(row[31]),
             viewPaid:si(row[32]), postType:ss(row[14]),
             title:ss(row[7]), link:ss(row[11]),
@@ -607,7 +608,7 @@ function renderTab0(){
   var d=FILTERED;
   var totalPosts=d.length;
   var totalViews=sum(d,'views');
-  var totalEng=sum(d,'engagement');
+  var totalEng=sum(d,'reactions')+sum(d,'comments')+sum(d,'shares');
   var totalReach=sum(d,'reach');
   var avgEng=totalPosts?Math.round(totalEng/totalPosts):0;
   var totalImg=d.filter(function(r){return r.postType==='\u0e23\u0e39\u0e1b\u0e20\u0e32\u0e1e';}).length;

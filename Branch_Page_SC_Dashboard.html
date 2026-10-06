@@ -166,7 +166,7 @@ tbody tr:nth-child(even) td{background:#1C1E21}
       <button class="btn btn-gold" onclick="applyFilters()">&#128269; Filter</button>
       <button class="btn btn-outline" onclick="clearFilters()">&#10005; &#xe25;&#xe49;&#xe32;&#xe07;</button>
       <button class="btn btn-outline" style="font-size:.75rem;padding:6px 10px;color:#f87171;border-color:#f87171" onclick="if(confirm('ล้างข้อมูลที่ import ไว้ กลับเป็นข้อมูลเริ่มต้น?')){try{localStorage.removeItem('Branch_SC_Dashboard_data');localStorage.removeItem('Branch_SC_Dashboard_ts');}catch(e){}location.reload();}">🗑 ล้าง Import</button>
-      <button class="btn btn-pdf" <button class="btn btn-import" onclick="document.getElementById('xlsxInput').click()">📥 Import Excel</button>
+      <button class="btn btn-import" onclick="document.getElementById('xlsxInput').click()">📥 Import Excel</button>
       <button class="btn btn-import" style="background:linear-gradient(135deg,#1a5c2a,#2d8f4a)" onclick="saveAsHTML()">💾 Save JSON</button>
       <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)"><span id="importStatus"></span>
       <button class="btn btn-pdf" onclick="exportPDF()">&#128196; Export PDF</button>

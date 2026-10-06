@@ -162,7 +162,7 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
       <button class="btn btn-gold" onclick="applyFilters()">🔍 Filter</button>
       <button class="btn btn-outline" onclick="clearFilters()">✕ ล้าง</button>
       <button class="btn btn-outline" style="font-size:.75rem;padding:6px 10px;color:#f87171;border-color:#f87171" onclick="if(confirm('ล้างข้อมูลที่ import ไว้ กลับเป็นข้อมูลเริ่มต้น?')){try{localStorage.removeItem('SR_SC_Dashboard_data');localStorage.removeItem('SR_SC_Dashboard_ts');}catch(e){}location.reload();}">🗑 ล้าง Import</button>
-      <button class="btn btn-pdf" <button class="btn btn-import" onclick="document.getElementById('xlsxInput').click()">📥 Import Excel</button>
+      <button class="btn btn-import" onclick="document.getElementById('xlsxInput').click()">📥 Import Excel</button>
       <button class="btn btn-import" style="background:linear-gradient(135deg,#1a5c2a,#2d8f4a)" onclick="saveAsHTML()">💾 Save JSON</button>
       <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)"><span id="importStatus"></span>
       <button class="btn btn-pdf" onclick="exportPDF()">📄 Export PDF</button>
@@ -193,14 +193,11 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
       <th class="th-sort" onclick="sortTable0('posts')" id="th0_posts">โพสต์<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('img')" id="th0_img">รูปภาพ<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('vid')" id="th0_vid">วิดีโอ<span class="sort-arrow"></span></th>
-      <th class="th-sort" onclick="sortTable0('shared')" id="th0_shared">จำนวนแชร์<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('views')" id="th0_views">ยอดดู<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('orgViews')" id="th0_orgViews">Organic Views<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('paidViews')" id="th0_paidViews">Paid Views<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('eng')" id="th0_eng">Engagement<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('reach')" id="th0_reach">การเข้าถึง<span class="sort-arrow"></span></th>
-      <th class="th-sort" onclick="sortTable0('reachOrganic')" id="th0_reachOrganic">Organic Reach<span class="sort-arrow"></span></th>
-      <th class="th-sort" onclick="sortTable0('reachPaid')" id="th0_reachPaid">Paid Reach<span class="sort-arrow"></span></th>
       <th class="th-sort" onclick="sortTable0('avgEng')" id="th0_avgEng">Avg Eng/โพสต์<span class="sort-arrow"></span></th>
     </tr></thead>
     <tbody id="tb0"></tbody>
@@ -474,11 +471,11 @@ window.importExcel = function(input) {
             month:y+'-'+String(m).padStart(2,'0'),
             pageFull:ss(row[5])||sname,
             reach:si(row[21]), engagement:si(row[22]),
+            reactions:si(row[23]), comments:si(row[24]), shares:si(row[25]), clicks:si(row[26]),
             views:si(row[20]), viewOrganic:si(row[31]),
             viewPaid:si(row[32]), postType:ss(row[14]),
             title:ss(row[7]), link:ss(row[11]),
             isShared:ss(row[13]),
-            reachOrganic:si(row[33]), reachPaid:si(row[34])
           });
         }
       });
@@ -615,7 +612,7 @@ function renderTab0(){
   var d=FILTERED;
   var totalPosts=d.length;
   var totalViews=sum(d,'views');
-  var totalEng=sum(d,'engagement');
+  var totalEng=sum(d,'reactions')+sum(d,'comments')+sum(d,'shares');
   var totalReach=sum(d,'reach');
   var avgEng=totalPosts?Math.round(totalEng/totalPosts):0;
   var totalImg=d.filter(function(r){return r.postType==='\u0e23\u0e39\u0e1b\u0e20\u0e32\u0e1e';}).length;
@@ -640,7 +637,7 @@ function renderTab0(){
 
   // Per-page aggregates
   var pd={};
-  ALL_PAGES.forEach(function(p){pd[p]={posts:0,views:0,eng:0,reach:0,img:0,vid:0,orgViews:0,paidViews:0,reachOrganic:0,reachPaid:0,shared:0};});
+  ALL_PAGES.forEach(function(p){pd[p]={posts:0,views:0,eng:0,reach:0,img:0,vid:0,orgViews:0,paidViews:0};});
   d.forEach(function(r){
     if(!pd[r.scPage])return;
     pd[r.scPage].posts++;
@@ -649,9 +646,6 @@ function renderTab0(){
     pd[r.scPage].reach+=+r.reach||0;
     pd[r.scPage].orgViews+=+r.viewOrganic||0;
     pd[r.scPage].paidViews+=+r.viewPaid||0;
-    pd[r.scPage].reachOrganic+=+r.reachOrganic||0;
-    pd[r.scPage].reachPaid+=+r.reachPaid||0;
-    pd[r.scPage].shared+=+r.isShared||0;
     if(r.postType==='\u0e23\u0e39\u0e1b\u0e20\u0e32\u0e1e')pd[r.scPage].img++;
     if(r.postType==='\u0e27\u0e34\u0e14\u0e35\u0e42\u0e2d')pd[r.scPage].vid++;
   });
@@ -670,7 +664,7 @@ function renderTab0(){
   tb.innerHTML=pp.map(function(p){
     var x=pd[p];
     var ae=x.posts?Math.round(x.eng/x.posts):0;
-    return '<tr><td>'+p+'</td><td>'+fmt(x.posts)+'</td><td>'+fmt(x.img)+'</td><td>'+fmt(x.vid)+'</td><td>'+fmt(x.shared)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.orgViews)+'</td><td>'+fmt(x.paidViews)+'</td><td>'+fmt(x.eng)+'</td><td>'+fmt(x.reach)+'</td><td>'+fmt(x.reachOrganic)+'</td><td>'+fmt(x.reachPaid)+'</td><td>'+fmt(ae)+'</td></tr>';
+    return '<tr><td>'+p+'</td><td>'+fmt(x.posts)+'</td><td>'+fmt(x.img)+'</td><td>'+fmt(x.vid)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.orgViews)+'</td><td>'+fmt(x.paidViews)+'</td><td>'+fmt(x.eng)+'</td><td>'+fmt(x.reach)+'</td><td>'+fmt(ae)+'</td></tr>';
   }).join('');
 }
 
@@ -698,7 +692,7 @@ window.sortTable0=function(col){
   // Rebuild per-page data
   var d=FILTERED;
   var pd={};
-  ALL_PAGES.forEach(function(p){pd[p]={posts:0,views:0,eng:0,reach:0,img:0,vid:0,orgViews:0,paidViews:0,reachOrganic:0,reachPaid:0,shared:0};});
+  ALL_PAGES.forEach(function(p){pd[p]={posts:0,views:0,eng:0,reach:0,img:0,vid:0,orgViews:0,paidViews:0};});
   d.forEach(function(r){
     if(!pd[r.scPage])return;
     pd[r.scPage].posts++;
@@ -707,9 +701,6 @@ window.sortTable0=function(col){
     pd[r.scPage].reach+=+r.reach||0;
     pd[r.scPage].orgViews+=+r.viewOrganic||0;
     pd[r.scPage].paidViews+=+r.viewPaid||0;
-    pd[r.scPage].reachOrganic+=+r.reachOrganic||0;
-    pd[r.scPage].reachPaid+=+r.reachPaid||0;
-    pd[r.scPage].shared+=+r.isShared||0;
     if(r.postType==='รูปภาพ')pd[r.scPage].img++;
     if(r.postType==='วิดีโอ')pd[r.scPage].vid++;
   });
@@ -728,7 +719,7 @@ window.sortTable0=function(col){
   var tb=document.getElementById('tb0');
   tb.innerHTML=pp.map(function(p){
     var x=pd[p];
-    return '<tr><td>'+p+'</td><td>'+fmt(x.posts)+'</td><td>'+fmt(x.img)+'</td><td>'+fmt(x.vid)+'</td><td>'+fmt(x.shared)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.orgViews)+'</td><td>'+fmt(x.paidViews)+'</td><td>'+fmt(x.eng)+'</td><td>'+fmt(x.reach)+'</td><td>'+fmt(x.reachOrganic)+'</td><td>'+fmt(x.reachPaid)+'</td><td>'+fmt(x.avgEng)+'</td></tr>';
+    return '<tr><td>'+p+'</td><td>'+fmt(x.posts)+'</td><td>'+fmt(x.img)+'</td><td>'+fmt(x.vid)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.orgViews)+'</td><td>'+fmt(x.paidViews)+'</td><td>'+fmt(x.eng)+'</td><td>'+fmt(x.reach)+'</td><td>'+fmt(x.avgEng)+'</td></tr>';
   }).join('');
 };
 
