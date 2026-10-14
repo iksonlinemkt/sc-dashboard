@@ -155,7 +155,7 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
   <div class="filter-row">
     <div class="filter-group">
       <label>SC Page</label>
-      <select id="fPage"><option value="">ั้งหมด</option></select>
+      <select id="fPage" onchange="applyFilters()"><option value="">ทั้งหมด</option></select>
     </div>
     <div style="flex:1">
       <div class="filter-mode">
@@ -165,19 +165,19 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
       <div class="filter-row" style="gap:8px;flex-wrap:wrap;margin-top:4px">
         <div class="filter-group" id="grpYear">
           <label>ปี</label>
-          <select id="fYear"><option value="">ั้งหมด</option></select>
+          <select id="fYear" onchange="applyFilters()"><option value="">ทั้งหมด</option></select>
         </div>
         <div class="filter-group" id="grpMonth">
           <label>เดือน</label>
-          <select id="fMonth"><option value="">ั้งหมด</option></select>
+          <select id="fMonth" onchange="applyFilters()"><option value="">ทั้งหมด</option></select>
         </div>
         <div class="filter-group" id="grpFrom">
           <label>วันที่ เริ่มต้น</label>
-          <input type="date" id="fFrom" disabled>
+          <input type="date" id="fFrom" disabled onchange="applyFilters()">
         </div>
         <div class="filter-group" id="grpTo">
           <label>วันที่ สิ้นสุด</label>
-          <input type="date" id="fTo" disabled>
+          <input type="date" id="fTo" disabled onchange="applyFilters()">
         </div>
       </div>
     </div>
