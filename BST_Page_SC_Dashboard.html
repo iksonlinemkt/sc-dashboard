@@ -287,7 +287,13 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
 <div id="dbImportOverlay">
   <div id="dbImportBox">
     <h2>📤 Import Excel ไปยัง Database</h2>
-    <div id="dbImportPreview">กรุณาเลือกไฟล์ Excel ก่อน</div>
+    <div style="background:#3d2a0a;border:1px solid #c8972a;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:.85rem;color:#f5c842;line-height:1.6">
+      ⚠️ <b>คำเตือน:</b> การ Import จะ<b>ลบข้อมูล BST ทั้งหมดใน DB ก่อน</b> แล้วแทนที่ด้วยข้อมูลจากไฟล์ใหม่<br>
+      <span style="color:#c8b88a">ตรวจสอบข้อมูลใน Preview ให้ถูกต้องก่อนกด ยืนยัน</span>
+    </div>
+    <div id="dbImportPreview" style="margin-bottom:10px">
+      <button class="btn btn-outline" style="width:100%;padding:10px;font-size:.9rem" onclick="document.getElementById('xlsxDbInput').click()">📂 เลือกไฟล์ Excel (Facebook Insights)</button>
+    </div>
     <label>🔑 รหัสผ่าน</label>
     <input type="password" id="dbImportPwd" placeholder="กรอกรหัสผ่าน..." autocomplete="off">
     <div id="dbImportProgress">
@@ -467,18 +473,19 @@ function dbParseDate(v) {
 
 function openDbImport() {
   _dbParsedRows = [];
-  document.getElementById('dbImportPreview').textContent = 'กรุณาเลือกไฟล์ Excel ก่อน';
+  // Reset preview กลับเป็นปุ่มเลือกไฟล์
+  document.getElementById('dbImportPreview').innerHTML =
+    '<button class="btn btn-outline" style="width:100%;padding:10px;font-size:.9rem" onclick="document.getElementById(\'xlsxDbInput\').click()">📂 เลือกไฟล์ Excel (Facebook Insights)</button>';
   document.getElementById('dbImportPwd').value = '';
   document.getElementById('dbImportProgress').style.display = 'none';
   document.getElementById('dbImportProgressFill').style.width = '0%';
   document.getElementById('dbImportResult').style.display = 'none';
   document.getElementById('dbImportResult').textContent = '';
   document.getElementById('dbImportConfirmBtn').disabled = true;
+  // Reset file input ให้เลือกไฟล์เดิมซ้ำได้
+  document.getElementById('xlsxDbInput').value = '';
   document.getElementById('dbImportOverlay').classList.add('show');
-  // เปิด file picker
-  var fi = document.getElementById('xlsxDbInput');
-  fi.value = '';
-  fi.click();
+  // ไม่เปิด file picker อัตโนมัติ — user กด "เลือกไฟล์" เองในกล่อง dialog
 }
 
 function closeDbImport() {
@@ -554,7 +561,8 @@ function onDbFileSelected(input) {
           return '<span style="color:#4ade80">'+k+'</span>: '+_mCounts[k]+' rows';
         }).join(' &nbsp;|&nbsp; ');
         preview.innerHTML =
-          '📊 Branch: <b style="color:#f5c842">'+BRANCH+'</b><br>'+
+          '📊 Branch: <b style="color:#f5c842">'+BRANCH+'</b> &nbsp;'+
+          '<span style="float:right"><a href="#" style="color:#c8b88a;font-size:.8rem" onclick="document.getElementById(\'xlsxDbInput\').click();return false">📂 เปลี่ยนไฟล์</a></span><br>'+
           '📋 Sheets: '+wb.SheetNames.length+'<br>'+
           '📝 Rows ทั้งหมด: <b style="color:#4ade80">'+_dbParsedRows.length.toLocaleString('th-TH')+'</b><br>'+
           '📅 เดือน: '+_mList+'<br>'+
@@ -562,7 +570,9 @@ function onDbFileSelected(input) {
         document.getElementById('dbImportConfirmBtn').disabled = false;
       }
     } catch(err) {
-      document.getElementById('dbImportPreview').textContent = '❌ อ่านไฟล์ไม่ได้: '+err.message;
+      document.getElementById('dbImportPreview').innerHTML =
+        '❌ อ่านไฟล์ไม่ได้: '+err.message+'<br>'+
+        '<button class="btn btn-outline" style="margin-top:8px;font-size:.82rem" onclick="document.getElementById(\'xlsxDbInput\').click()">📂 ลองเลือกไฟล์ใหม่</button>';
       document.getElementById('dbImportConfirmBtn').disabled = true;
     }
   };
