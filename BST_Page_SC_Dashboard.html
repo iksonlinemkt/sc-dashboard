@@ -318,14 +318,25 @@ function _initDashboard(data){
 }
 // ดึงข้อมูลจาก ikssa.io API
 (function(){
-  fetch('https://api.ikssa.io/api/sc_posts.php?branch=BST&order=asc')
-  .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+  var stEl=document.getElementById("importStatus");
+  if(stEl){stEl.style.display='inline-block';stEl.style.background='#1a2a3a';stEl.style.color='#f5c842';stEl.style.border='1px solid #2a4a6e';stEl.style.borderRadius='6px';stEl.textContent='⏳ กำลังโหลดข้อมูลจาก API...';}
+  var API_URL='https://api.ikssa.io/api/sc_posts.php?branch=BST&order=asc';
+  fetch(API_URL)
+  .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status+" "+r.statusText);return r.json();})
   .then(function(data){
-    var mapped=data.map(function(r){return{scPage:r.sc_page,date:r.date,month:r.month,views:r.views||0,reach:r.reach||0,engagement:r.engagement||0,reactions:r.reactions||0,comments:r.comments||0,shares:r.shares||0,clicks:r.clicks||0,viewOrganic:r.view_organic||0,viewPaid:r.view_paid||0,postType:r.post_type||'',title:r.title||'',link:r.link||''};}); 
-    console.log("[BST] loaded from ikssa.io:",mapped.length);
-    _initDashboard(mapped);
+    if(!Array.isArray(data))throw new Error("Response is not array: "+JSON.stringify(data).substring(0,120));
+    console.log("[BST] loaded:",data.length,"records, first scPage:",data.length?data[0].sc_page:'none');
+    _initDashboard(data.map(function(r){return{scPage:r.sc_page,date:r.date,month:r.month,views:+r.views||0,reach:+r.reach||0,engagement:+r.engagement||0,reactions:+r.reactions||0,comments:+r.comments||0,shares:+r.shares||0,clicks:+r.clicks||0,viewOrganic:+r.view_organic||0,viewPaid:+r.view_paid||0,postType:r.post_type||'',title:r.title||'',link:r.link||''};}));
   })
-  .catch(function(err){console.error("[BST] API fetch failed:",err);});
+  .catch(function(err){
+    console.error("[BST] API fetch failed:",err);
+    if(stEl){stEl.className='err';stEl.style.background='';stEl.style.color='';stEl.style.border='';stEl.textContent='❌ โหลดข้อมูลไม่สำเร็จ: '+err.message;}
+    var d=document.createElement('div');
+    d.style.cssText='padding:8px 20px;background:#3d1a1a;color:#f87171;font-size:.8rem;border-top:1px solid #5a2020;';
+    d.innerHTML='⚠️ ทดสอบ API: <a href="'+API_URL+'&limit=2" target="_blank" style="color:#f5c842;text-decoration:underline">คลิกลิงก์นี้</a> — ถ้าขึ้น JSON หมายความว่า API ทำงานปกติ';
+    var fb=document.querySelector('.filter-bar');
+    if(fb&&fb.parentNode)fb.parentNode.insertBefore(d,fb.nextSibling);
+  });
 })();
 // Init: disable date range inputs on load
 document.getElementById('fFrom').disabled=true;
