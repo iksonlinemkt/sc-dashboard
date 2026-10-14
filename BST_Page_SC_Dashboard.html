@@ -444,19 +444,24 @@ var DB_COL = {
 
 function dbParseDate(v) {
   if (v === null || v === undefined || v === '') return null;
-  // Excel serial number
-  if (typeof v === 'number' && v > 40000) {
-    var dt = new Date(Math.round((v - 25569) * 86400 * 1000));
-    var y = dt.getUTCFullYear(), m = dt.getUTCMonth()+1, d = dt.getUTCDate();
-    return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-  }
+  // String path first — handles both:
+  //   • Facebook text dates (MM/DD/YYYY) when day > 12 (Excel can't misparse)
+  //   • Thai-locale Excel formatted dates (.w = D/M/YYYY for converted cells)
+  //     Reading .w as MM/DD/YYYY gives the "double-swap" correction:
+  //     Excel stored Sep 7 from "7/9/2026" MM/DD, .w shows "7/9/2026" D/M,
+  //     parsing first digit as month → July 9 (correct original intent)
   var s = String(v).trim();
-  // MM/DD/YYYY HH:MM or M/D/YYYY H:MM
   var m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (m1) return m1[3]+'-'+m1[1].padStart(2,'0')+'-'+m1[2].padStart(2,'0');
   // YYYY-MM-DD
   var m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m2) return m2[0].substring(0,10);
+  // Fallback: Excel serial number (only if .w was unavailable and we got cell.v)
+  if (typeof v === 'number' && v > 40000) {
+    var dt = new Date(Math.floor((v - 25569) * 86400 * 1000));
+    var y = dt.getUTCFullYear(), m = dt.getUTCMonth()+1, d = dt.getUTCDate();
+    return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  }
   return null;
 }
 
@@ -507,7 +512,13 @@ function onDbFileSelected(input) {
         for (var ri = dataStart; ri < rows.length; ri++) {
           var row = rows[ri];
           if (!row || row.length < 10) continue;
-          var dateStr = dbParseDate(row[DB_COL.published]);
+          // ใช้ cell.w (formatted text) เพื่อหลีกเลี่ยง Thai-locale date conversion bug
+          // Excel Thai locale แปลง "7/9/2026" (MM/DD) เป็น date serial ของ Sep 7,
+          // แต่ cell.w แสดงเป็น "7/9/2026" (D/M) — parse เป็น MM/DD จะได้ July 9 ถูกต้อง
+          var _cellRef = XLSX.utils.encode_cell({r: ri, c: DB_COL.published});
+          var _cell = ws[_cellRef];
+          var rawDate = _cell ? (_cell.w !== undefined ? _cell.w : _cell.v) : '';
+          var dateStr = dbParseDate(rawDate);
           if (!dateStr) continue;
           _dbParsedRows.push({
             sc_page:     sname,
