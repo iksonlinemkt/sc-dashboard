@@ -544,10 +544,20 @@ function onDbFileSelected(input) {
         preview.innerHTML = '❌ ไม่พบข้อมูล — ตรวจสอบ format ไฟล์<br><small style="color:#8a7a5a">ต้องเป็น Facebook Insights Export (.xlsx)</small>';
         document.getElementById('dbImportConfirmBtn').disabled = true;
       } else {
+        // สรุป month breakdown เพื่อให้ตรวจสอบว่า parse วันที่ถูกต้อง
+        var _mCounts = {};
+        _dbParsedRows.forEach(function(r) {
+          var mo = r.date.substring(0, 7);
+          _mCounts[mo] = (_mCounts[mo] || 0) + 1;
+        });
+        var _mList = Object.keys(_mCounts).sort().map(function(k) {
+          return '<span style="color:#4ade80">'+k+'</span>: '+_mCounts[k]+' rows';
+        }).join(' &nbsp;|&nbsp; ');
         preview.innerHTML =
           '📊 Branch: <b style="color:#f5c842">'+BRANCH+'</b><br>'+
           '📋 Sheets: '+wb.SheetNames.length+'<br>'+
           '📝 Rows ทั้งหมด: <b style="color:#4ade80">'+_dbParsedRows.length.toLocaleString('th-TH')+'</b><br>'+
+          '📅 เดือน: '+_mList+'<br>'+
           '<small style="color:#8a7a5a">'+sheetSummary.join(' | ')+'</small>';
         document.getElementById('dbImportConfirmBtn').disabled = false;
       }
