@@ -467,7 +467,7 @@ function dbParseDate(v) {
   return null;
 }
 
-function openDbImport() {
+window.openDbImport = function() {
   _dbParsedRows = [];
   // Reset preview กลับเป็นปุ่มเลือกไฟล์
   document.getElementById('dbImportPreview').innerHTML =
@@ -484,11 +484,11 @@ function openDbImport() {
   // ไม่เปิด file picker อัตโนมัติ — user กด "เลือกไฟล์" เองในกล่อง dialog
 }
 
-function closeDbImport() {
+window.closeDbImport = function() {
   document.getElementById('dbImportOverlay').classList.remove('show');
-}
+};
 
-function onDbFileSelected(input) {
+window.onDbFileSelected = function(input) {
   var file = input.files[0];
   if (!file) { closeDbImport(); return; }
   var preview = document.getElementById('dbImportPreview');
@@ -575,7 +575,7 @@ function onDbFileSelected(input) {
   reader.readAsArrayBuffer(file);
 }
 
-function confirmDbImport() {
+window.confirmDbImport = function() {
   var pwd = document.getElementById('dbImportPwd').value.trim();
   if (!pwd) { alert('กรุณากรอกรหัสผ่าน'); return; }
   if (_dbParsedRows.length === 0) { alert('ไม่มีข้อมูล'); return; }
