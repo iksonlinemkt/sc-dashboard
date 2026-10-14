@@ -1,0 +1,26 @@
+# SC Dashboard API — CORS & PHP limits
+# อนุญาต CORS ที่ Apache level (ก่อน PHP จะทำงาน)
+
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header always set Access-Control-Max-Age "86400"
+</IfModule>
+
+# ตอบ OPTIONS preflight ทันที ไม่ต้องถึง PHP
+RewriteEngine On
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^ - [R=204,L]
+
+# เพิ่ม limit สำหรับ import ข้อมูลขนาดใหญ่
+<IfModule mod_php.c>
+    php_value post_max_size 32M
+    php_value max_input_time 120
+    php_value max_execution_time 120
+</IfModule>
+<IfModule mod_php8.c>
+    php_value post_max_size 32M
+    php_value max_input_time 120
+    php_value max_execution_time 120
+</IfModule>
