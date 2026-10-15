@@ -589,44 +589,60 @@ window.confirmDbImport = function() {
   result.style.display = 'none';
   progressFill.style.width = '30%';
 
-  fetch(IMPORT_API, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      password: pwd,
-      branch: BRANCH,
-      rows: _dbParsedRows
-    })
-  })
-  .then(function(r) {
-    progressFill.style.width = '80%';
-    return r.json().then(function(json) { return {ok: r.ok, json: json}; });
-  })
-  .then(function(res) {
-    progressFill.style.width = '100%';
-    progress.style.display = 'none';
-    result.style.display = 'block';
-    if (res.ok && res.json.success) {
+  // Chunked import — ส่งทีละ 500 rows เพื่อป้องกัน JSON ใหญ่เกิน
+  var CHUNK = 500;
+  var chunks = [];
+  for (var ci = 0; ci < _dbParsedRows.length; ci += CHUNK) {
+    chunks.push(_dbParsedRows.slice(ci, ci + CHUNK));
+  }
+  var totalInserted = 0;
+  var totalDeleted  = 0;
+
+  function sendChunk(idx) {
+    if (idx >= chunks.length) {
+      // เสร็จทุก chunk
+      progressFill.style.width = '100%';
+      progress.style.display = 'none';
+      result.style.display = 'block';
       result.className = 'ok';
-      result.textContent = '✅ Import สำเร็จ! บันทึก '+res.json.inserted.toLocaleString('th-TH')+' rows ลง DB (ลบเก่า '+res.json.deleted+' rows)';
-      // โหลด dashboard ใหม่จาก API
-      setTimeout(function() {
-        closeDbImport();
-        location.reload();
-      }, 2000);
-    } else {
-      result.className = 'err';
-      result.textContent = '❌ ' + (res.json.error || 'เกิดข้อผิดพลาด');
-      confirmBtn.disabled = false;
+      result.textContent = '✅ Import สำเร็จ! บันทึก '+totalInserted.toLocaleString('th-TH')+' rows ลง DB (ลบเก่า '+totalDeleted+' rows)';
+      setTimeout(function() { closeDbImport(); location.reload(); }, 2000);
+      return;
     }
-  })
-  .catch(function(err) {
-    progress.style.display = 'none';
-    result.style.display = 'block';
-    result.className = 'err';
-    result.textContent = '❌ Network error: '+err.message;
-    confirmBtn.disabled = false;
-  });
+    var pct = Math.round(30 + (idx / chunks.length) * 65);
+    progressFill.style.width = pct + '%';
+
+    fetch(IMPORT_API, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        password: pwd,
+        branch:   BRANCH,
+        append:   idx > 0,   // chunk แรก = delete+insert, ที่เหลือ = append
+        rows:     chunks[idx]
+      })
+    })
+    .then(function(r) {
+      return r.json().then(function(json) { return {ok: r.ok, json: json}; });
+    })
+    .then(function(res) {
+      if (!res.ok || !res.json.success) {
+        throw new Error(res.json.error || 'chunk '+(idx+1)+' failed');
+      }
+      totalInserted += res.json.inserted;
+      totalDeleted  += res.json.deleted;
+      sendChunk(idx + 1);
+    })
+    .catch(function(err) {
+      progress.style.display = 'none';
+      result.style.display = 'block';
+      result.className = 'err';
+      result.textContent = '❌ chunk '+(idx+1)+'/'+chunks.length+': '+err.message;
+      confirmBtn.disabled = false;
+    });
+  }
+
+  sendChunk(0);
 }
 
 // ── IMPORT EXCEL ────────────────────────────────────────────────────────────

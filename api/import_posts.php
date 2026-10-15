@@ -76,10 +76,14 @@ try {
         ]
     );
 
-    // ลบข้อมูลเก่า branch นี้ก่อน
-    $del = $pdo->prepare("DELETE FROM sc_posts WHERE branch = ?");
-    $del->execute([$branch]);
-    $deleted = $del->rowCount();
+    // ลบข้อมูลเก่า branch นี้ก่อน (เฉพาะ chunk แรก หรือไม่ได้ระบุ append)
+    $append  = !empty($input['append']);
+    $deleted = 0;
+    if (!$append) {
+        $del = $pdo->prepare("DELETE FROM sc_posts WHERE branch = ?");
+        $del->execute([$branch]);
+        $deleted = $del->rowCount();
+    }
 
     // เตรียม INSERT statement
     $ins = $pdo->prepare("
