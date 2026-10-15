@@ -77,6 +77,13 @@ try {
     );
     $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
 
+    // strip invalid UTF-8 bytes before INSERT
+    function utf8_clean($s) {
+        if (!is_string($s)) return '';
+        $r = iconv('UTF-8', 'UTF-8//IGNORE', $s);
+        return $r === false ? '' : $r;
+    }
+
     // ลบข้อมูลเก่า branch นี้ก่อน (เฉพาะ chunk แรก หรือไม่ได้ระบุ append)
     $append  = !empty($input['append']);
     $deleted = 0;
@@ -110,7 +117,7 @@ try {
 
         $ins->execute([
             $branch,
-            substr(trim($row['sc_page']   ?? ''), 0, 100),
+            substr(utf8_clean(trim($row['sc_page']   ?? '')), 0, 100),
             $date,
             $month,
             (int)($row['views']        ?? 0),
@@ -122,9 +129,9 @@ try {
             (int)($row['clicks']       ?? 0),
             (int)($row['view_organic'] ?? 0),
             (int)($row['view_paid']    ?? 0),
-            substr(trim($row['post_type'] ?? ''), 0, 100),
-            substr(trim($row['title']     ?? ''), 0, 500),
-            trim($row['link']             ?? ''),
+            substr(utf8_clean(trim($row['post_type'] ?? '')), 0, 100),
+            substr(utf8_clean(trim($row['title']     ?? '')), 0, 500),
+            utf8_clean(trim($row['link']             ?? '')),
         ]);
         $inserted++;
     }
