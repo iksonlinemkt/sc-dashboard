@@ -159,15 +159,15 @@ tbody tr:nth-child(even) td{background:#0f1e2e}
   <div class="filter-row">
     <div class="filter-group">
       <label>SC PAGE</label>
-      <select id="fPage"><option value="">ั้งหมด</option></select>
+      <select id="fPage"><option value="">ทั้งหมด</option></select>
     </div>
     <div class="filter-group" id="grpYear">
       <label>ปี</label>
-      <select id="fYear"><option value="">ั้งหมด</option></select>
+      <select id="fYear"><option value="">ทั้งหมด</option></select>
     </div>
     <div class="filter-group" id="grpMonth">
       <label>เดือน</label>
-      <select id="fMonth"><option value="">ั้งหมด</option></select>
+      <select id="fMonth"><option value="">ทั้งหมด</option></select>
     </div>
     <div class="filter-group" id="grpFrom">
       <label>วันที่ เริ่มต้น</label>
@@ -421,157 +421,6 @@ function getFiltered(){
 function rebuildFilters() {
   var fpEl = document.getElementById('fPage');
   if (fpEl) {
-    while (fpEl.options.length > 1) fpEl.remove(1);
-    ALL_PAGES.forEach(function(p) {
-      var o = document.createElement('option');
-      o.value = p; o.textContent = p; fpEl.appendChild(o);
-    });
-  }
-  var fyEl = document.getElementById('fYear');
-  if (fyEl) {
-    while (fyEl.options.length > 1) fyEl.remove(1);
-    ALL_YEARS.forEach(function(y) {
-      var o = document.createElement('option');
-      o.value = y; o.textContent = y; fyEl.appendChild(o);
-    });
-  }
-  var fmEl = document.getElementById('fMonth');
-  if (fmEl) {
-    while (fmEl.options.length > 1) fmEl.remove(1);
-    ALL_MONTHS_RAW.forEach(function(mo) {
-      var parts = mo.split('-');
-      var lbl = MONTH_NAMES[parseInt(parts[1])-1] + ' ' + parts[0];
-      var o = document.createElement('option');
-      o.value = mo; o.textContent = lbl; fmEl.appendChild(o);
-    });
-  }
-}
-
-window.importExcel = function(input) {
-  var file = input.files[0];
-  if (!file) return;
-  var status = document.getElementById('importStatus');
-  status.className = ''; status.style.display = 'inline-block';
-  status.textContent = '⏳ กำลังโหลด...';
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      var wb = XLSX.read(e.target.result, {type:'array'});
-      var allRecords = [];
-      function si(v){var n=parseInt(parseFloat(v)||0);return isNaN(n)?0:n;}
-      function ss(v){return v!==null&&v!==undefined?String(v):'';}
-      function parseAnyDate(v) {
-        if (!v && v!==0) return null;
-        var s=String(v).trim();
-        var m1=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
-        if(m1) return {y:+m1[1],m:+m1[2],d:+m1[3]};
-        var m2=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
-        if(m2) return {y:+m2[3],m:+m2[2],d:+m2[1]};
-        var num=parseFloat(v);
-        if(!isNaN(num)&&num>40000){
-          var dt=new Date(Math.round((num-25569)*86400*1000));
-          return {y:dt.getUTCFullYear(),m:dt.getUTCMonth()+1,d:dt.getUTCDate()};
-        }
-        return null;
-      }
-      wb.SheetNames.forEach(function(sname) {
-        var ws = wb.Sheets[sname];
-        var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-        if (!rows.length) return;
-        // BST: Day=col[1], Month=col[2], Year=col[3] (position-based)
-        // Try header-based first, fallback to position-based
-        var headerIdx=0, bestScore=0;
-        for (var hi=0; hi<Math.min(5,rows.length); hi++) {
-          var score=0;
-          var rowStr=rows[hi].map(function(c){return String(c||'');}).join('|');
-          ['ชื่อ','ประเภท','วันที่','การแสดงผล','การเข้าถึง','ลิงก์'].forEach(function(kw){
-            if(rowStr.indexOf(kw)>=0) score++;
-          });
-          if(score>bestScore){bestScore=score;headerIdx=hi;}
-        }
-        for (var ri = headerIdx+1; ri < rows.length; ri++) {
-          var row = rows[ri];
-          if (!row || row.length < 10) continue;
-          // Try date from col[1]/col[2]/col[3] (BST split format)
-          var dayV=parseFloat(row[1])||0, monthV=parseFloat(row[2])||0, yearV=parseFloat(row[3])||0;
-          var y,m,d;
-          if (dayV && monthV && yearV) {
-            y=Math.round(yearV); m=Math.round(monthV); d=Math.round(dayV);
-            if(y>2500) y-=543;
-          } else {
-            // Fallback: try col[0] as full date
-            var pd=parseAnyDate(row[0]);
-            if(!pd) continue;
-            y=pd.y; m=pd.m; d=pd.d;
-            if(y>2500) y-=543;
-          }
-          if(y<2000||y>2100||m<1||m>12||d<1||d>31) continue;
-          var dateStr=y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-          allRecords.push({
-            scPage:sname, date:dateStr,
-            month:y+'-'+String(m).padStart(2,'0'),
-            pageFull:ss(row[5])||sname,
-            reach:si(row[21]), engagement:si(row[22]),
-            reactions:si(row[23]), comments:si(row[24]), shares:si(row[25]), clicks:si(row[26]),
-            views:si(row[20]), viewOrganic:si(row[31]),
-            viewPaid:si(row[32]), postType:ss(row[14]),
-            title:ss(row[7]), link:ss(row[11]),
-            isShared:ss(row[13]),
-          });
-        }
-      });
-      if (!allRecords.length) {
-        var wb2=XLSX.read(e.target.result,{type:'array'});
-        var ws2=wb2.Sheets[wb2.SheetNames[0]];
-        var rows2=XLSX.utils.sheet_to_json(ws2,{header:1,defval:''});
-        var headerSample=rows2.slice(0,3).map(function(r){return r.slice(0,6).join(' | ');}).join(' /// ');
-        status.className='err';
-        status.textContent='❌ ไม่พบข้อมูล — Headers: '+headerSample.substring(0,150);
-        input.value=''; return;
-      }
-            RAW=allRecords;
-      ALL_PAGES=[...new Set(RAW.map(function(d){return d.scPage;}))].sort();
-      ALL_MONTHS_RAW=[...new Set(RAW.map(function(d){return d.month;}))].sort();
-      ALL_YEARS=[...new Set(ALL_MONTHS_RAW.map(function(mo){return mo.split('-')[0];}))].sort();
-      // Reset sort state
-      topSortOrganic='desc'; topSortPaid='desc';
-      table0SortCol=null; table0SortDir='desc';
-      // Rebuild filter dropdowns
-      rebuildFilters();
-      // FORCE reset all filter dropdowns to blank (ทั้งหมด)
-      var _ids=['fPage','fYear','fMonth','fFrom','fTo'];
-      for(var _i=0;_i<_ids.length;_i++){
-        var _el=document.getElementById(_ids[_i]);
-        if(_el){_el.value='';_el.selectedIndex=0;_el.disabled=false;}
-      }
-      // Set filterMode directly
-      filterMode='monthyear';
-      var _ym=document.getElementById('btnModeMonthYear');
-      var _dr=document.getElementById('btnModeDateRange');
-      if(_ym) _ym.classList.add('active');
-      if(_dr) _dr.classList.remove('active');
-      // Set FILTERED to ALL data
-      FILTERED=RAW.slice();
-      // Destroy all charts and re-render
-      Object.keys(charts).forEach(function(id){if(charts[id]){charts[id].destroy();delete charts[id];}});
-      renderTab0();
-      // Status message with month breakdown
-      var monthCounts={};
-      allRecords.forEach(function(r){monthCounts[r.month]=(monthCounts[r.month]||0)+1;});
-      var monthList=Object.keys(monthCounts).sort().map(function(k){return k+':'+monthCounts[k];}).join(', ');
-      try{
-      }catch(e){}
-      status.className='ok';
-      status.textContent='\u2705 '+allRecords.length.toLocaleString('th-TH')+' records | '+wb.SheetNames.length+' sheets | '+monthList;
-      } catch(err){status.className='err';status.textContent='❌ Error: '+err.message;}
-    input.value='';
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function rebuildFilters() {
-  var fpEl = document.getElementById('fPage');
-  if (fpEl) {
     var cur = fpEl.value;
     while (fpEl.options.length > 1) fpEl.remove(1);
     ALL_PAGES.forEach(function(p) {
@@ -601,25 +450,6 @@ function rebuildFilters() {
     });
   }
 };
-// ── END IMPORT EXCEL ────────────────────────────
-
-
-// ── SAVE AS HTML (Embed data + Download) ────────────────────────────────────
-function saveAsHTML() {
-  if (!RAW || !RAW.length) { alert("ไม่มีข้อมูล กรุณา Import Excel ก่อน"); return; }
-  var filename = "sr_data.json";
-  var stEl = document.getElementById("importStatus");
-  try {
-    var blob = new Blob([JSON.stringify(RAW, null, 0)], {type:"application/json;charset=utf-8"});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href=url; a.download=filename;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
-    if(stEl){stEl.className="ok";stEl.style.display="inline-block";stEl.textContent="💾 บันทึก "+filename+" สำเร็จ พร้อม push GitHub";}
-  } catch(err){ alert("Error: "+err.message); }
-}
-// ── END SAVE AS HTML ─────────────────────────────────────────────────────────
 
 window.applyFilters=function(){FILTERED=getFiltered();renderAll();};
 window.clearFilters=function(){
