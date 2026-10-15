@@ -627,7 +627,7 @@ window.confirmDbImport = function() {
     })
     .then(function(res) {
       if (!res.ok || !res.json.success) {
-        throw new Error(res.json.error || 'chunk '+(idx+1)+' failed');
+        throw new Error(JSON.stringify(res.json));
       }
       totalInserted += res.json.inserted;
       totalDeleted  += res.json.deleted;
