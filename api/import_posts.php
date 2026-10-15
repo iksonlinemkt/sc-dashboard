@@ -75,6 +75,7 @@ try {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]
     );
+    $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
 
     // ลบข้อมูลเก่า branch นี้ก่อน (เฉพาะ chunk แรก หรือไม่ได้ระบุ append)
     $append  = !empty($input['append']);
