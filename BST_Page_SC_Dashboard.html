@@ -612,22 +612,26 @@ window.confirmDbImport = function() {
     var pct = Math.round(30 + (idx / chunks.length) * 65);
     progressFill.style.width = pct + '%';
 
+    // sanitize lone UTF-16 surrogates ก่อน JSON.stringify (บางครั้งมาจาก Excel/emoji)
+    var cleanReplacer = function(k, v) {
+      return typeof v === 'string' ? v.replace(/[\uD800-\uDFFF]/g, '') : v;
+    };
     fetch(IMPORT_API, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         password: pwd,
         branch:   BRANCH,
-        append:   idx > 0,   // chunk แรก = delete+insert, ที่เหลือ = append
+        append:   idx > 0,
         rows:     chunks[idx]
-      })
+      }, cleanReplacer)
     })
     .then(function(r) {
       return r.json().then(function(json) { return {ok: r.ok, json: json}; });
     })
     .then(function(res) {
       if (!res.ok || !res.json.success) {
-        throw new Error(JSON.stringify(res.json));
+        throw new Error(res.json.error || 'chunk '+(idx+1)+' failed');
       }
       totalInserted += res.json.inserted;
       totalDeleted  += res.json.deleted;
