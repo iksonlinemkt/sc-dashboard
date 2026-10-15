@@ -119,6 +119,25 @@ tbody tr:nth-child(even) td{background:#1C1E21}
 #importStatus{font-size:.8rem;padding:4px 10px;border-radius:6px;display:none;margin-left:8px;}
 #importStatus.ok{background:#1a3d2b;color:#4ade80;display:inline-block;}
 #importStatus.err{background:#3d1a1a;color:#f87171;display:inline-block;}
+.btn-dbimport{background:linear-gradient(135deg,#5c1a8a,#8a2db5);color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;transition:opacity .2s;}
+.btn-dbimport:hover{opacity:.85;}
+
+/* ── IMPORT DB MODAL ── */
+#dbImportOverlay{display:none;position:fixed;inset:0;background:#00000099;z-index:9999;align-items:center;justify-content:center;}
+#dbImportOverlay.show{display:flex;}
+#dbImportBox{background:#112236;border:1.5px solid #c8972a;border-radius:16px;padding:28px 32px;min-width:340px;max-width:94vw;box-shadow:0 8px 40px #00000070;font-family:'Sarabun',Arial,sans-serif;}
+#dbImportBox h2{color:#f5c842;font-size:1.1rem;margin-bottom:18px;font-weight:700;}
+#dbImportBox label{font-size:.78rem;color:#c8b88a;display:block;margin-bottom:4px;}
+#dbImportBox input[type=password]{width:100%;background:#0d1b2a;border:1px solid #2a4a6e;color:#f0e6d0;padding:8px 12px;border-radius:8px;font-size:.9rem;margin-bottom:14px;}
+#dbImportBox input[type=password]:focus{outline:none;border-color:#c8972a;}
+#dbImportPreview{background:#0d1b2a;border:1px solid #2a4a6e;border-radius:8px;padding:12px;margin-bottom:16px;font-size:.82rem;color:#c8b88a;line-height:1.6;}
+#dbImportProgress{display:none;margin-bottom:12px;}
+#dbImportProgressBar{height:8px;background:#2a4a6e;border-radius:4px;overflow:hidden;margin-top:6px;}
+#dbImportProgressFill{height:100%;background:linear-gradient(90deg,#c8972a,#f5c842);width:0%;transition:width .3s;border-radius:4px;}
+#dbImportResult{margin-bottom:12px;font-size:.85rem;font-weight:600;display:none;}
+#dbImportResult.ok{color:#4ade80;}
+#dbImportResult.err{color:#f87171;}
+.dbimport-btns{display:flex;gap:10px;justify-content:flex-end;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -169,6 +188,8 @@ tbody tr:nth-child(even) td{background:#1C1E21}
       <button class="btn btn-import" onclick="document.getElementById('xlsxInput').click()">📥 Import Excel</button>
       <button class="btn btn-import" style="background:linear-gradient(135deg,#1a5c2a,#2d8f4a)" onclick="saveAsHTML()">💾 Save JSON</button>
       <input type="file" id="xlsxInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)"><span id="importStatus"></span>
+      <button class="btn-dbimport" onclick="openDbImport()">📤 Import ไปยัง DB</button>
+      <input type="file" id="xlsxDbInput" accept=".xlsx,.xls" style="display:none" onchange="onDbFileSelected(this)">
       <button class="btn btn-pdf" onclick="exportPDF()">&#128196; Export PDF</button>
     </div>
   </div>
@@ -259,6 +280,31 @@ tbody tr:nth-child(even) td{background:#1C1E21}
     &#128270; &#xe01;&#xe23;&#xe32;&#xe1f;&#xe41;&#xe2a;&#xe14;&#xe07;&#xe04;&#xe27;&#xe32;&#xe21;&#xe2a;&#xe21;&#xe48;&#xe33;&#xe40;&#xe2a;&#xe21;&#xe2d;&#xe01;&#xe32;&#xe23;&#xe42;&#xe1e;&#xe2a;&#xe15;&#xe4c; &#xe40;&#xe17;&#xe35;&#xe22;&#xe1a;&#xe27;&#xe31;&#xe19;&#xe17;&#xe35;&#xe48; &#xe41;&#xe22;&#xe01;&#xe15;&#xe32;&#xe21;&#xe1b;&#xe23;&#xe30;&#xe40;&#xe20;&#xe17;&#xe42;&#xe1e;&#xe2a;&#xe15;&#xe4c; (&#xe23;&#xe39;&#xe1b;&#xe20;&#xe32;&#xe1e; vs &#xe27;&#xe34;&#xe14;&#xe35;&#xe42;&#xe2d;)
   </p>
   <div class="posting-grid" id="postingCharts"></div>
+</div>
+
+<!-- ── IMPORT TO DB MODAL ─────────────────────────────────────────────────── -->
+<div id="dbImportOverlay">
+  <div id="dbImportBox">
+    <h2>📤 Import Excel ไปยัง Database</h2>
+    <div style="background:#3d2a0a;border:1px solid #c8972a;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:.85rem;color:#f5c842;line-height:1.6">
+      ⚠️ <b>คำเตือน:</b> การ Import จะ<b>ลบข้อมูล Branch ทั้งหมดใน DB ก่อน</b> แล้วแทนที่ด้วยข้อมูลจากไฟล์ใหม่<br>
+      <span style="color:#c8b88a">ตรวจสอบข้อมูลใน Preview ให้ถูกต้องก่อนกด ยืนยัน</span>
+    </div>
+    <div id="dbImportPreview" style="margin-bottom:10px">
+      <button class="btn btn-outline" style="width:100%;padding:10px;font-size:.9rem" onclick="document.getElementById('xlsxDbInput').click()">📂 เลือกไฟล์ Excel (Facebook Insights)</button>
+    </div>
+    <label>🔑 รหัสผ่าน</label>
+    <input type="password" id="dbImportPwd" placeholder="กรอกรหัสผ่าน..." autocomplete="off">
+    <div id="dbImportProgress">
+      <span style="font-size:.8rem;color:#c8b88a">⏳ กำลัง Import...</span>
+      <div id="dbImportProgressBar"><div id="dbImportProgressFill"></div></div>
+    </div>
+    <div id="dbImportResult"></div>
+    <div class="dbimport-btns">
+      <button class="btn btn-outline" onclick="closeDbImport()">ยกเลิก</button>
+      <button class="btn btn-gold" id="dbImportConfirmBtn" onclick="confirmDbImport()" disabled>✅ ยืนยัน Import</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -871,11 +917,204 @@ window.showTab=function(idx){
 
 window.exportPDF=function(){
   html2pdf().set({
-    margin:8,filename:'BST_Page_SC_Dashboard.pdf',
+    margin:8,filename:'Branch_Page_SC_Dashboard.pdf',
     image:{type:'jpeg',quality:.9},
     html2canvas:{scale:1.4,useCORS:true,backgroundColor:'#18191A'},
     jsPDF:{unit:'mm',format:'a3',orientation:'landscape'}
   }).from(document.body).save();
+};
+
+// ── IMPORT TO DB (ส่งข้อมูลขึ้น MySQL) ──────────────────────────────────────
+var _dbParsedRows = [];
+var IMPORT_API = 'https://api.ikssa.io/api/import_posts.php';
+var BRANCH = 'Branch';
+
+var DB_COL = {
+  published:   6,
+  link:        8,
+  post_type:  11,
+  title:       3,
+  views:      17,
+  reach:      18,
+  engagement: 19,
+  reactions:  20,
+  comments:   21,
+  shares:     22,
+  clicks:     23,
+  view_organic:24,
+  view_paid:  25
+};
+
+function dbParseDate(v) {
+  if (v === null || v === undefined || v === '') return null;
+  var s = String(v).trim();
+  var m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m1) return m1[3]+'-'+m1[1].padStart(2,'0')+'-'+m1[2].padStart(2,'0');
+  var m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m2) return m2[0].substring(0,10);
+  if (typeof v === 'number' && v > 40000) {
+    var dt = new Date(Math.floor((v - 25569) * 86400 * 1000));
+    var y = dt.getUTCFullYear(), m = dt.getUTCMonth()+1, d = dt.getUTCDate();
+    return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  }
+  return null;
+}
+
+window.openDbImport = function() {
+  _dbParsedRows = [];
+  document.getElementById('dbImportPreview').innerHTML =
+    '<button class="btn btn-outline" style="width:100%;padding:10px;font-size:.9rem" onclick="document.getElementById(\'xlsxDbInput\').click()">📂 เลือกไฟล์ Excel (Facebook Insights)</button>';
+  document.getElementById('dbImportPwd').value = '';
+  document.getElementById('dbImportProgress').style.display = 'none';
+  document.getElementById('dbImportProgressFill').style.width = '0%';
+  document.getElementById('dbImportResult').style.display = 'none';
+  document.getElementById('dbImportResult').textContent = '';
+  document.getElementById('dbImportConfirmBtn').disabled = true;
+  document.getElementById('xlsxDbInput').value = '';
+  document.getElementById('dbImportOverlay').classList.add('show');
+};
+
+window.closeDbImport = function() {
+  document.getElementById('dbImportOverlay').classList.remove('show');
+};
+
+window.onDbFileSelected = function(input) {
+  var file = input.files[0];
+  if (!file) { closeDbImport(); return; }
+  var preview = document.getElementById('dbImportPreview');
+  preview.textContent = '⏳ กำลังอ่านไฟล์...';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
+      _dbParsedRows = [];
+      var sheetSummary = [];
+      wb.SheetNames.forEach(function(sname) {
+        var ws = wb.Sheets[sname];
+        var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        var count = 0;
+        var dataStart = 1;
+        for (var hi = 0; hi < Math.min(5, rows.length); hi++) {
+          var r = rows[hi];
+          var str = r.map(function(c){return String(c||'');}).join('|');
+          if (str.indexOf('เวลาที่เผยแพร่') >= 0 || str.indexOf('เผยแพร่') >= 0) {
+            dataStart = hi + 1; break;
+          }
+        }
+        for (var ri = dataStart; ri < rows.length; ri++) {
+          var row = rows[ri];
+          if (!row || row.length < 10) continue;
+          var _cellRef = XLSX.utils.encode_cell({r: ri, c: DB_COL.published});
+          var _cell = ws[_cellRef];
+          var rawDate = _cell ? (_cell.w !== undefined ? _cell.w : _cell.v) : '';
+          var dateStr = dbParseDate(rawDate);
+          if (!dateStr) continue;
+          _dbParsedRows.push({
+            sc_page:     sname,
+            date:        dateStr,
+            views:       parseInt(parseFloat(row[DB_COL.views]))||0,
+            reach:       parseInt(parseFloat(row[DB_COL.reach]))||0,
+            engagement:  parseInt(parseFloat(row[DB_COL.engagement]))||0,
+            reactions:   parseInt(parseFloat(row[DB_COL.reactions]))||0,
+            comments:    parseInt(parseFloat(row[DB_COL.comments]))||0,
+            shares:      parseInt(parseFloat(row[DB_COL.shares]))||0,
+            clicks:      parseInt(parseFloat(row[DB_COL.clicks]))||0,
+            view_organic:parseInt(parseFloat(row[DB_COL.view_organic]))||0,
+            view_paid:   parseInt(parseFloat(row[DB_COL.view_paid]))||0,
+            post_type:   String(row[DB_COL.post_type]||''),
+            title:       String(row[DB_COL.title]||'').substring(0,500),
+            link:        String(row[DB_COL.link]||''),
+          });
+          count++;
+        }
+        sheetSummary.push(sname+': '+count+' rows');
+      });
+      if (_dbParsedRows.length === 0) {
+        preview.innerHTML = '❌ ไม่พบข้อมูล — ตรวจสอบ format ไฟล์<br><small style="color:#8a7a5a">ต้องเป็น Facebook Insights Export (.xlsx)</small>';
+        document.getElementById('dbImportConfirmBtn').disabled = true;
+      } else {
+        var _mCounts = {};
+        _dbParsedRows.forEach(function(r) {
+          var mo = r.date.substring(0, 7);
+          _mCounts[mo] = (_mCounts[mo] || 0) + 1;
+        });
+        var _mList = Object.keys(_mCounts).sort().map(function(k) {
+          return '<span style="color:#4ade80">'+k+'</span>: '+_mCounts[k]+' rows';
+        }).join(' &nbsp;|&nbsp; ');
+        preview.innerHTML =
+          '📊 Branch: <b style="color:#f5c842">'+BRANCH+'</b> &nbsp;'+
+          '<span style="float:right"><a href="#" style="color:#c8b88a;font-size:.8rem" onclick="document.getElementById(\'xlsxDbInput\').click();return false">📂 เปลี่ยนไฟล์</a></span><br>'+
+          '📋 Sheets: '+wb.SheetNames.length+'<br>'+
+          '📝 Rows ทั้งหมด: <b style="color:#4ade80">'+_dbParsedRows.length.toLocaleString('th-TH')+'</b><br>'+
+          '📅 เดือน: '+_mList+'<br>'+
+          '<small style="color:#8a7a5a">'+sheetSummary.join(' | ')+'</small>';
+        document.getElementById('dbImportConfirmBtn').disabled = false;
+      }
+    } catch(err) {
+      document.getElementById('dbImportPreview').innerHTML =
+        '❌ อ่านไฟล์ไม่ได้: '+err.message+'<br>'+
+        '<button class="btn btn-outline" style="margin-top:8px;font-size:.82rem" onclick="document.getElementById(\'xlsxDbInput\').click()">📂 ลองเลือกไฟล์ใหม่</button>';
+      document.getElementById('dbImportConfirmBtn').disabled = true;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+window.confirmDbImport = function() {
+  var pwd = document.getElementById('dbImportPwd').value.trim();
+  if (!pwd) { alert('กรุณากรอกรหัสผ่าน'); return; }
+  if (_dbParsedRows.length === 0) { alert('ไม่มีข้อมูล'); return; }
+  var confirmBtn = document.getElementById('dbImportConfirmBtn');
+  confirmBtn.disabled = true;
+  var progress = document.getElementById('dbImportProgress');
+  var progressFill = document.getElementById('dbImportProgressFill');
+  var result = document.getElementById('dbImportResult');
+  progress.style.display = 'block';
+  result.style.display = 'none';
+  progressFill.style.width = '30%';
+  var CHUNK = 500;
+  var chunks = [];
+  for (var ci = 0; ci < _dbParsedRows.length; ci += CHUNK) {
+    chunks.push(_dbParsedRows.slice(ci, ci + CHUNK));
+  }
+  var totalInserted = 0;
+  var totalDeleted  = 0;
+  function sendChunk(idx) {
+    if (idx >= chunks.length) {
+      progressFill.style.width = '100%';
+      progress.style.display = 'none';
+      result.style.display = 'block';
+      result.className = 'ok';
+      result.textContent = '✅ Import สำเร็จ! บันทึก '+totalInserted.toLocaleString('th-TH')+' rows ลง DB (ลบเก่า '+totalDeleted+' rows)';
+      setTimeout(function() { closeDbImport(); location.reload(); }, 2000);
+      return;
+    }
+    var pct = Math.round(30 + (idx / chunks.length) * 65);
+    progressFill.style.width = pct + '%';
+    var cleanReplacer = function(k, v) {
+      return typeof v === 'string' ? v.replace(/[\uD800-\uDFFF]/g, '') : v;
+    };
+    fetch(IMPORT_API, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({password:pwd, branch:BRANCH, append:idx>0, rows:chunks[idx]}, cleanReplacer)
+    })
+    .then(function(r) { return r.json().then(function(json){return {ok:r.ok,json:json};}); })
+    .then(function(res) {
+      if (!res.ok || !res.json.success) throw new Error(res.json.error || 'chunk '+(idx+1)+' failed');
+      totalInserted += res.json.inserted;
+      totalDeleted  += res.json.deleted;
+      sendChunk(idx + 1);
+    })
+    .catch(function(err) {
+      progress.style.display = 'none';
+      result.style.display = 'block';
+      result.className = 'err';
+      result.textContent = '❌ chunk '+(idx+1)+'/'+chunks.length+': '+err.message;
+      confirmBtn.disabled = false;
+    });
+  }
+  sendChunk(0);
 };
 
 })();
