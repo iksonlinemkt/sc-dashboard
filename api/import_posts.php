@@ -28,10 +28,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // ── AUTH ─────────────────────────────────────────────────────────────────────
 define('IMPORT_PASSWORD', 'iks1234');
 
-$input = json_decode(file_get_contents('php://input'), true);
+$rawInput = file_get_contents('php://input');
+$input = json_decode($rawInput, true);
 if (!$input) {
     http_response_code(400);
-    echo json_encode(['error' => 'JSON ไม่ถูกต้อง']);
+    echo json_encode([
+        'error'          => 'JSON ไม่ถูกต้อง',
+        'content_length' => $_SERVER['CONTENT_LENGTH'] ?? 'n/a',
+        'input_length'   => strlen($rawInput),
+        'post_max_size'  => ini_get('post_max_size'),
+        'json_error'     => json_last_error_msg(),
+        'input_preview'  => substr($rawInput, 0, 200),
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
