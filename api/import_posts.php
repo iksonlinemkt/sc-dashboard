@@ -1,5 +1,6 @@
 <?php
 // import_posts.php — SC Dashboard: รับ JSON จาก browser แล้ว import ลง MySQL
+mb_internal_encoding('UTF-8');
 header('Content-Type: application/json; charset=utf-8');
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
@@ -73,15 +74,24 @@ try {
         [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci",
         ]
     );
-    $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
 
-    // strip invalid UTF-8 bytes before INSERT
+    // strip invalid UTF-8 byte sequences before INSERT
+    // iconv//IGNORE removes bad bytes; preg_replace//u removes anything iconv missed
     function utf8_clean($s) {
         if (!is_string($s)) return '';
-        $r = iconv('UTF-8', 'UTF-8//IGNORE', $s);
-        return $r === false ? '' : $r;
+        $r = @iconv('UTF-8', 'UTF-8//IGNORE', $s);
+        if ($r === false) $r = '';
+        // preg_replace with /u flag silently drops any remaining invalid sequences
+        $r2 = preg_replace('/[^\x{0009}\x{000A}\x{000D}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u', '', $r);
+        return $r2 ?? $r;
+    }
+
+    // mb_col: trim → clean → mb_substr by CHARACTER (not byte!) to avoid cutting mid-Thai-char
+    function mb_col($s, $maxChars) {
+        return mb_substr(utf8_clean(trim($s)), 0, $maxChars, 'UTF-8');
     }
 
     // ลบข้อมูลเก่า branch นี้ก่อน (เฉพาะ chunk แรก หรือไม่ได้ระบุ append)
@@ -117,7 +127,7 @@ try {
 
         $ins->execute([
             $branch,
-            substr(utf8_clean(trim($row['sc_page']   ?? '')), 0, 100),
+            mb_col($row['sc_page']   ?? '', 100),
             $date,
             $month,
             (int)($row['views']        ?? 0),
@@ -129,9 +139,9 @@ try {
             (int)($row['clicks']       ?? 0),
             (int)($row['view_organic'] ?? 0),
             (int)($row['view_paid']    ?? 0),
-            substr(utf8_clean(trim($row['post_type'] ?? '')), 0, 100),
-            substr(utf8_clean(trim($row['title']     ?? '')), 0, 500),
-            utf8_clean(trim($row['link']             ?? '')),
+            mb_col($row['post_type'] ?? '', 100),
+            mb_col($row['title']     ?? '', 500),
+            utf8_clean(trim($row['link'] ?? '')),
         ]);
         $inserted++;
     }
