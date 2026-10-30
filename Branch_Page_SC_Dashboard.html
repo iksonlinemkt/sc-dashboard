@@ -971,14 +971,14 @@ window.confirmDbImport = function() {
     chunks.push(_dbParsedRows.slice(ci, ci + CHUNK));
   }
   var totalInserted = 0;
-  var totalDeleted  = 0;
+  var totalUpdated  = 0;
   function sendChunk(idx) {
     if (idx >= chunks.length) {
       progressFill.style.width = '100%';
       progress.style.display = 'none';
       result.style.display = 'block';
       result.className = 'ok';
-      result.textContent = '✅ Import สำเร็จ! บันทึก '+totalInserted.toLocaleString('th-TH')+' rows ลง DB (ลบเก่า '+totalDeleted+' rows)';
+      result.textContent = '✅ Import สำเร็จ! เพิ่มใหม่ '+totalInserted.toLocaleString('th-TH')+' rows | อัปเดต '+totalUpdated.toLocaleString('th-TH')+' rows';
       setTimeout(function() { closeDbImport(); location.reload(); }, 2000);
       return;
     }
@@ -995,8 +995,8 @@ window.confirmDbImport = function() {
     .then(function(r) { return r.json().then(function(json){return {ok:r.ok,json:json};}); })
     .then(function(res) {
       if (!res.ok || !res.json.success) throw new Error(res.json.error || 'chunk '+(idx+1)+' failed');
-      totalInserted += res.json.inserted;
-      totalDeleted  += res.json.deleted;
+      totalInserted += (res.json.inserted || 0);
+      totalUpdated  += (res.json.updated  || 0);
       sendChunk(idx + 1);
     })
     .catch(function(err) {
