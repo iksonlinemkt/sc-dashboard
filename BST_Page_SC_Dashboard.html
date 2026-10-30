@@ -561,10 +561,13 @@ window.onDbFileSelected = function(input) {
         for (var ri = dataStart; ri < rows.length; ri++) {
           var row = rows[ri];
           if (!row || row.length < 4) continue;
-          // ใช้ cell.w (formatted text) เพื่อหลีกเลี่ยง Thai-locale date conversion bug
           var _cellRef = XLSX.utils.encode_cell({r: ri, c: C.published});
           var _cell = ws[_cellRef];
-          var rawDate = _cell ? (_cell.w !== undefined ? _cell.w : _cell.v) : '';
+          // ถ้า .v เป็น Excel serial number (> 40000) ให้ใช้ .v โดยตรง
+          // เพราะ .w อาจเป็น format พ.ศ. / Thai locale เช่น "8/1/2569" ที่ parse ผิด
+          var rawDate = _cell
+            ? ((typeof _cell.v === 'number' && _cell.v > 40000) ? _cell.v : (_cell.w !== undefined ? _cell.w : _cell.v))
+            : '';
           var dateStr = dbParseDate(rawDate);
           if (!dateStr) continue;
           _dbParsedRows.push({
