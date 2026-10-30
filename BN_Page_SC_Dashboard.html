@@ -864,6 +864,8 @@ window.onDbFileSelected = function(input) {
       _dbParsedRows = [];
       var sheetSummary = [];
       wb.SheetNames.forEach(function(sname) {
+        // ตัดส่วนวันที่ที่ Facebook ต่อท้ายชื่อ sheet เช่น "รัตน์สุดา Oct-01-2026_Oct-10-20" → "รัตน์สุดา"
+        var scPageName = sname.replace(/\s+[A-Za-z]{3}[-\d_].*$/, '').replace(/\s+\d{4}[-_].*$/, '').trim() || sname;
         var ws = wb.Sheets[sname];
         var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
         var count = 0;
@@ -890,7 +892,7 @@ window.onDbFileSelected = function(input) {
           var dateStr = dbParseDate(rawDate);
           if (!dateStr) continue;
           _dbParsedRows.push({
-            sc_page:     sname,
+            sc_page:     scPageName,
             date:        dateStr,
             views:       parseInt(parseFloat(row[C.views]))||0,
             reach:       parseInt(parseFloat(row[C.reach]))||0,
