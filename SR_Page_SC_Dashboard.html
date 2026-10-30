@@ -801,7 +801,15 @@ window.openDbImport = function() {
   document.getElementById('dbImportResult').style.display = 'none';
   document.getElementById('dbImportResult').textContent = '';
   document.getElementById('dbImportConfirmBtn').disabled = true;
-  document.getElementById('xlsxDbInput').value = '';
+  // Recreate file input to guarantee onchange fires even if same file re-selected
+  (function(){
+    var old = document.getElementById('xlsxDbInput');
+    if (!old) return;
+    var inp = document.createElement('input');
+    inp.type='file'; inp.id='xlsxDbInput'; inp.accept='.xlsx,.xls'; inp.style.display='none';
+    inp.onchange = function(){ onDbFileSelected(this); };
+    old.parentNode.replaceChild(inp, old);
+  })();
   document.getElementById('dbImportOverlay').classList.add('show');
 };
 
@@ -825,7 +833,7 @@ window.onDbFileSelected = function(input) {
         var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
         var count = 0;
         var dataStart = 1;
-        for (var hi = 0; hi < Math.min(5, rows.length); hi++) {
+        for (var hi = 0; hi < Math.min(10, rows.length); hi++) {
           var r = rows[hi];
           var str = r.map(function(c){return String(c||'');}).join('|');
           if (str.indexOf('เวลาที่เผยแพร่') >= 0 || str.indexOf('เผยแพร่') >= 0) {
@@ -834,7 +842,7 @@ window.onDbFileSelected = function(input) {
         }
         for (var ri = dataStart; ri < rows.length; ri++) {
           var row = rows[ri];
-          if (!row || row.length < 10) continue;
+          if (!row || row.length < 4) continue;
           var _cellRef = XLSX.utils.encode_cell({r: ri, c: DB_COL.published});
           var _cell = ws[_cellRef];
           var rawDate = _cell ? (_cell.w !== undefined ? _cell.w : _cell.v) : '';
@@ -861,7 +869,14 @@ window.onDbFileSelected = function(input) {
         sheetSummary.push(sname+': '+count+' rows');
       });
       if (_dbParsedRows.length === 0) {
-        preview.innerHTML = '❌ ไม่พบข้อมูล — ตรวจสอบ format ไฟล์<br><small style="color:#8a7a5a">ต้องเป็น Facebook Insights Export (.xlsx)</small>';
+        var _diagSheets = wb.SheetNames.map(function(sn){
+          var _r = XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+          return '"'+sn+'" ('+_r.length+' rows, '+(_r[1]||[]).length+' cols)';
+        }).join(', ');
+        preview.innerHTML = '❌ ไม่พบข้อมูล — ตรวจสอบ format ไฟล์<br>'+
+          '<small style="color:#8a7a5a">ต้องเป็น Facebook Insights Export (.xlsx)<br>'+
+          'Sheets ที่พบ: '+_diagSheets+'<br>'+
+          '<a href="#" style="color:#c8b88a" onclick="document.getElementById(\'xlsxDbInput\').click();return false">📂 ลองเลือกไฟล์ใหม่</a></small>';
         document.getElementById('dbImportConfirmBtn').disabled = true;
       } else {
         var _mCounts = {};
