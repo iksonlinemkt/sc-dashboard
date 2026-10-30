@@ -444,11 +444,11 @@ var DB_COL = {
   view_paid:  25
 };
 
-function dbParseDate(v, fmt) {
+function dbParseDate(v) {
   if (v === null || v === undefined || v === '') return null;
   var s = String(v).trim();
   var m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (m1) { var _ma=parseInt(m1[1]); if(fmt==='DD/MM'||_ma>12){return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');} return m1[3]+'-'+m1[1].padStart(2,'0')+'-'+m1[2].padStart(2,'0'); }
+  if (m1) { return m1[3]+'-'+m1[1].padStart(2,'0')+'-'+m1[2].padStart(2,'0'); } // MM/DD/YYYY เสมอ
   // YYYY-MM-DD
   var m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m2) return m2[0].substring(0,10);
@@ -554,22 +554,6 @@ window.onDbFileSelected = function(input) {
         }
         // ตรวจ column positions จาก header row อัตโนมัติ
         var C = detectColsFromHeader(rows[dataStart - 1] || []);
-        // ตรวจ format วันที่: ถ้า sheet name มี date-range suffix (sname ≠ scPageName)
-        // แสดงว่าเป็น Facebook short-range export → MM/DD
-        // ถ้าเป็นชื่อ page ล้วนๆ → Thai full-year (DD/MM) ตรวจจาก pre-scan
-        var sheetDateFormat = 'DD/MM'; // default
-        if (sname !== scPageName) {
-          sheetDateFormat = 'MM/DD'; // Facebook short date-range export
-        } else {
-          for (var _si = dataStart; _si < rows.length; _si++) {
-            var _scRef = XLSX.utils.encode_cell({r:_si, c:C.published});
-            var _sc = ws[_scRef];
-            if (!_sc) continue;
-            var _sv = (typeof _sc.v === 'string') ? _sc.v : (_sc.w || '');
-            var _sm = String(_sv).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-            if (_sm) { var _sa=parseInt(_sm[1]),_sb=parseInt(_sm[2]); if(_sa>12){sheetDateFormat='DD/MM';break;} if(_sb>12){sheetDateFormat='MM/DD';break;} }
-          }
-        }
         for (var ri = dataStart; ri < rows.length; ri++) {
           var row = rows[ri];
           if (!row || row.length < 4) continue;
@@ -580,7 +564,7 @@ window.onDbFileSelected = function(input) {
           var rawDate = _cell
             ? ((typeof _cell.v === 'number' && _cell.v > 40000) ? _cell.v : (_cell.w !== undefined ? _cell.w : _cell.v))
             : '';
-          var dateStr = dbParseDate(rawDate, sheetDateFormat);
+          var dateStr = dbParseDate(rawDate);
           if (!dateStr) continue;
           _dbParsedRows.push({
             sc_page:     scPageName,
