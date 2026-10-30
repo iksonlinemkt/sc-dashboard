@@ -780,7 +780,7 @@ function dbParseDate(v, fmt) {
   if (v === null || v === undefined || v === '') return null;
   var s = String(v).trim();
   var m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (m1) { var mm=parseInt(m1[1]),dd=parseInt(m1[2]); if(mm<1||mm>12||dd<1||dd>31) return null; return m1[3]+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0'); } // MM/DD/YYYY เสมอ + validate
+  if (m1) { var mm=parseInt(fmt==='MM/DD'?m1[1]:m1[2]),dd=parseInt(fmt==='MM/DD'?m1[2]:m1[1]); if(mm<1||mm>12||dd<1||dd>31) return null; return m1[3]+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0'); } // validate month+day
   var m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m2) return m2[0].substring(0,10);
   if (typeof v === 'number' && v > 40000) {
@@ -883,7 +883,7 @@ window.onDbFileSelected = function(input) {
         var C = detectColsFromHeader(rows[dataStart - 1] || []);
         // ไฟล์ short-range (sheet name มี date suffix) = Facebook MM/DD/YYYY
         // ไฟล์ full-year (sheet name เป็นชื่อ page อย่างเดียว) = Thai DD/MM/YYYY
-        var sheetDateFormat = 'MM/DD'; // Facebook ทุกไฟล์ใช้ MM/DD/YYYY + validate month 1-12
+        var sheetDateFormat = (sname !== scPageName) ? 'MM/DD' : 'DD/MM'; // short-range=MM/DD, full-year=DD/MM
         for (var ri = dataStart; ri < rows.length; ri++) {
           var row = rows[ri];
           if (!row || row.length < 4) continue;
