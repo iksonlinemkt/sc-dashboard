@@ -877,7 +877,7 @@ window.onDbFileSelected = function(input) {
         var C = detectColsFromHeader(rows[dataStart - 1] || []);
         // ไฟล์ short-range (sheet name มี date suffix) = Facebook MM/DD/YYYY
         // ไฟล์ full-year (sheet name เป็นชื่อ page อย่างเดียว) = Thai DD/MM/YYYY
-        var sheetDateFormat = (sname !== scPageName) ? 'MM/DD' : 'DD/MM';
+        var sheetDateFormat = 'MM/DD'; // Facebook ทุกไฟล์ใช้ MM/DD/YYYY เสมอ
         for (var ri = dataStart; ri < rows.length; ri++) {
           var row = rows[ri];
           if (!row || row.length < 4) continue;
