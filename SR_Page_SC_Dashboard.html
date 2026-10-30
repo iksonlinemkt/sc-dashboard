@@ -791,6 +791,43 @@ function dbParseDate(v) {
   return null;
 }
 
+// ตรวจหา column index จาก header row อัตโนมัติ (รองรับ Facebook เปลี่ยน layout)
+function detectColsFromHeader(headerRow) {
+  var C = {
+    published:    DB_COL.published,
+    link:         DB_COL.link,
+    post_type:    DB_COL.post_type,
+    title:        DB_COL.title,
+    views:        DB_COL.views,
+    reach:        DB_COL.reach,
+    engagement:   DB_COL.engagement,
+    reactions:    DB_COL.reactions,
+    comments:     DB_COL.comments,
+    shares:       DB_COL.shares,
+    clicks:       DB_COL.clicks,
+    view_organic: DB_COL.view_organic,
+    view_paid:    DB_COL.view_paid,
+  };
+  (headerRow||[]).forEach(function(cell, idx) {
+    var s = String(cell||'').trim();
+    if (!s) return;
+    if (s.indexOf('เวลาที่เผยแพร่')>=0) { C.published=idx; }
+    else if (s.indexOf('ลิงก์ถาวร')>=0||s.indexOf('Permalink')>=0) { C.link=idx; }
+    else if (s.indexOf('ประเภทโพสต์')>=0) { C.post_type=idx; }
+    else if (s==='ชื่อ'||s==='คำอธิบาย') { C.title=idx; }
+    else if (s==='ยอดดู') { C.views=idx; }
+    else if (s==='การเข้าถึง') { C.reach=idx; }
+    else if (s.indexOf('ความรู้สึก')>=0&&s.indexOf('ความคิดเห็น')>=0) { C.engagement=idx; }
+    else if (s==='ความรู้สึก') { C.reactions=idx; }
+    else if (s==='ความคิดเห็น') { C.comments=idx; }
+    else if (s==='การแชร์') { C.shares=idx; }
+    else if (s.indexOf('การคลิกทั้งหมด')>=0) { C.clicks=idx; }
+    else if (s.indexOf('ออร์แกนิก')>=0&&(s.indexOf('ดู')>=0||s.indexOf('เข้าถึง')>=0)) { C.view_organic=idx; }
+    else if (s.indexOf('โปรโมท')>=0&&(s.indexOf('ดู')>=0||s.indexOf('เข้าถึง')>=0)) { C.view_paid=idx; }
+  });
+  return C;
+}
+
 window.openDbImport = function() {
   _dbParsedRows = [];
   document.getElementById('dbImportPreview').innerHTML =
@@ -840,10 +877,12 @@ window.onDbFileSelected = function(input) {
             dataStart = hi + 1; break;
           }
         }
+        // ตรวจ column positions จาก header row อัตโนมัติ
+        var C = detectColsFromHeader(rows[dataStart - 1] || []);
         for (var ri = dataStart; ri < rows.length; ri++) {
           var row = rows[ri];
           if (!row || row.length < 4) continue;
-          var _cellRef = XLSX.utils.encode_cell({r: ri, c: DB_COL.published});
+          var _cellRef = XLSX.utils.encode_cell({r: ri, c: C.published});
           var _cell = ws[_cellRef];
           var rawDate = _cell ? (_cell.w !== undefined ? _cell.w : _cell.v) : '';
           var dateStr = dbParseDate(rawDate);
@@ -851,18 +890,18 @@ window.onDbFileSelected = function(input) {
           _dbParsedRows.push({
             sc_page:     sname,
             date:        dateStr,
-            views:       parseInt(parseFloat(row[DB_COL.views]))||0,
-            reach:       parseInt(parseFloat(row[DB_COL.reach]))||0,
-            engagement:  parseInt(parseFloat(row[DB_COL.engagement]))||0,
-            reactions:   parseInt(parseFloat(row[DB_COL.reactions]))||0,
-            comments:    parseInt(parseFloat(row[DB_COL.comments]))||0,
-            shares:      parseInt(parseFloat(row[DB_COL.shares]))||0,
-            clicks:      parseInt(parseFloat(row[DB_COL.clicks]))||0,
-            view_organic:parseInt(parseFloat(row[DB_COL.view_organic]))||0,
-            view_paid:   parseInt(parseFloat(row[DB_COL.view_paid]))||0,
-            post_type:   String(row[DB_COL.post_type]||''),
-            title:       String(row[DB_COL.title]||'').substring(0,500),
-            link:        String(row[DB_COL.link]||''),
+            views:       parseInt(parseFloat(row[C.views]))||0,
+            reach:       parseInt(parseFloat(row[C.reach]))||0,
+            engagement:  parseInt(parseFloat(row[C.engagement]))||0,
+            reactions:   parseInt(parseFloat(row[C.reactions]))||0,
+            comments:    parseInt(parseFloat(row[C.comments]))||0,
+            shares:      parseInt(parseFloat(row[C.shares]))||0,
+            clicks:      parseInt(parseFloat(row[C.clicks]))||0,
+            view_organic:parseInt(parseFloat(row[C.view_organic]))||0,
+            view_paid:   parseInt(parseFloat(row[C.view_paid]))||0,
+            post_type:   String(row[C.post_type]||''),
+            title:       String(row[C.title]||'').substring(0,500),
+            link:        String(row[C.link]||''),
           });
           count++;
         }
@@ -877,10 +916,12 @@ window.onDbFileSelected = function(input) {
             var _s = (_r[_hi]||[]).map(function(c){return String(c||'');}).join('|');
             if (_s.indexOf('เวลาที่เผยแพร่')>=0||_s.indexOf('เผยแพร่')>=0) { _hrow=_hi; break; }
           }
-          var _colG = (_r[1]||[])[6] || '(ว่าง)';
-          return '"'+sn+'" ('+_r.length+' rows, '+(_r[1]||[]).length+' cols'
-            +(_hrow>=0?' headerRow='+_hrow:' ⚠️ ไม่พบ header')
-            +') col G[1]="'+_colG+'"';
+          var _hdrRow = _hrow>=0 ? (_r[_hrow]||[]) : [];
+          var _dCols = detectColsFromHeader(_hdrRow);
+          var _dateColSample = (_r[_hrow>=0?_hrow+1:1]||[])[_dCols.published] || '(ว่าง)';
+          return '"'+sn+'" ('+_r.length+' rows, '+(_r[_hrow>=0?_hrow:1]||[]).length+' cols'
+            +(_hrow>=0?' headerRow='+_hrow+' dateCol='+_dCols.published:' ⚠️ ไม่พบ header')
+            +') sample date="'+String(_dateColSample).substring(0,25)+'"';
         }).join('<br>');
         preview.innerHTML = '❌ ไม่พบข้อมูล — ตรวจสอบ format ไฟล์<br>'+
           '<small style="color:#8a7a5a">ต้องเป็น Facebook Insights Export (.xlsx)<br>'+
