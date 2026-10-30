@@ -94,16 +94,8 @@ try {
         return mb_substr(utf8_clean(trim($s)), 0, $maxChars, 'UTF-8');
     }
 
-    // ลบข้อมูลเก่า branch นี้ก่อน (เฉพาะ chunk แรก หรือไม่ได้ระบุ append)
-    $append  = !empty($input['append']);
-    $deleted = 0;
-    if (!$append) {
-        $del = $pdo->prepare("DELETE FROM sc_posts WHERE branch = ?");
-        $del->execute([$branch]);
-        $deleted = $del->rowCount();
-    }
-
-    // เตรียม INSERT statement
+    // ── UPSERT: INSERT ใหม่, หรืออัปเดตถ้า (branch+link) ซ้ำ ──────────────────
+    // ต้องมี UNIQUE INDEX: ALTER TABLE sc_posts ADD UNIQUE INDEX idx_branch_link (branch, link(500));
     $ins = $pdo->prepare("
         INSERT INTO sc_posts
           (branch, sc_page, date, month, views, reach, engagement,
@@ -111,9 +103,25 @@ try {
            post_type, title, link)
         VALUES
           (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          sc_page      = VALUES(sc_page),
+          date         = VALUES(date),
+          month        = VALUES(month),
+          views        = VALUES(views),
+          reach        = VALUES(reach),
+          engagement   = VALUES(engagement),
+          reactions    = VALUES(reactions),
+          comments     = VALUES(comments),
+          shares       = VALUES(shares),
+          clicks       = VALUES(clicks),
+          view_organic = VALUES(view_organic),
+          view_paid    = VALUES(view_paid),
+          post_type    = VALUES(post_type),
+          title        = VALUES(title)
     ");
 
     $inserted = 0;
+    $updated  = 0;
     $skipped  = 0;
 
     foreach ($rows as $row) {
@@ -124,6 +132,7 @@ try {
             continue;
         }
         $month = substr($date, 0, 7); // YYYY-MM
+        $link  = utf8_clean(trim($row['link'] ?? ''));
 
         $ins->execute([
             $branch,
@@ -141,16 +150,23 @@ try {
             (int)($row['view_paid']    ?? 0),
             mb_col($row['post_type'] ?? '', 100),
             mb_col($row['title']     ?? '', 500),
-            utf8_clean(trim($row['link'] ?? '')),
+            $link,
         ]);
-        $inserted++;
+
+        // rowCount(): 1 = INSERT ใหม่, 2 = UPDATE ทับของเดิม, 0 = ข้อมูลเหมือนกันทุก field
+        $affected = $ins->rowCount();
+        if ($affected === 2) {
+            $updated++;
+        } else {
+            $inserted++;
+        }
     }
 
     echo json_encode([
         'success'  => true,
         'branch'   => $branch,
-        'deleted'  => $deleted,
         'inserted' => $inserted,
+        'updated'  => $updated,
         'skipped'  => $skipped,
     ], JSON_UNESCAPED_UNICODE);
 
