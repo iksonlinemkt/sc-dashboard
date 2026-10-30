@@ -512,7 +512,7 @@ window.onDbFileSelected = function(input) {
         var count = 0;
         // หา header row (skip rows ที่ไม่ใช่ header)
         var dataStart = 1;
-        for (var hi = 0; hi < Math.min(10, rows.length); hi++) {
+        for (var hi = 0; hi < Math.min(20, rows.length); hi++) {
           var r = rows[hi];
           var str = r.map(function(c){return String(c||'');}).join('|');
           if (str.indexOf('เวลาที่เผยแพร่') >= 0 || str.indexOf('เผยแพร่') >= 0) {
@@ -698,7 +698,7 @@ window.importExcel = function(input) {
         // BST: Day=col[1], Month=col[2], Year=col[3] (position-based)
         // Try header-based first, fallback to position-based
         var headerIdx=0, bestScore=0;
-        for (var hi=0; hi<Math.min(10,rows.length); hi++) {
+        for (var hi=0; hi<Math.min(20,rows.length); hi++) {
           var score=0;
           var rowStr=rows[hi].map(function(c){return String(c||'');}).join('|');
           ['ชื่อ','ประเภท','วันที่','การแสดงผล','การเข้าถึง','ลิงก์'].forEach(function(kw){

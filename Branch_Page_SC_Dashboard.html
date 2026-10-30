@@ -827,7 +827,7 @@ window.onDbFileSelected = function(input) {
         var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
         var count = 0;
         var dataStart = 1;
-        for (var hi = 0; hi < Math.min(10, rows.length); hi++) {
+        for (var hi = 0; hi < Math.min(20, rows.length); hi++) {
           var r = rows[hi];
           var str = r.map(function(c){return String(c||'');}).join('|');
           if (str.indexOf('เวลาที่เผยแพร่') >= 0 || str.indexOf('เผยแพร่') >= 0) {
