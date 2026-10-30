@@ -879,15 +879,21 @@ window.onDbFileSelected = function(input) {
         }
         // ตรวจ column positions จาก header row อัตโนมัติ
         var C = detectColsFromHeader(rows[dataStart - 1] || []);
-        // Pre-scan: detect date format DD/MM (Thai full-year) vs MM/DD (Facebook short-range)
+        // ตรวจ format วันที่: ถ้า sheet name มี date-range suffix (sname ≠ scPageName)
+        // แสดงว่าเป็น Facebook short-range export → MM/DD
+        // ถ้าเป็นชื่อ page ล้วนๆ → Thai full-year (DD/MM) ตรวจจาก pre-scan
         var sheetDateFormat = 'DD/MM'; // default
-        for (var _si = dataStart; _si < rows.length; _si++) {
-          var _scRef = XLSX.utils.encode_cell({r:_si, c:C.published});
-          var _sc = ws[_scRef];
-          if (!_sc) continue;
-          var _sv = (typeof _sc.v === 'string') ? _sc.v : (_sc.w || '');
-          var _sm = String(_sv).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-          if (_sm) { var _sa=parseInt(_sm[1]),_sb=parseInt(_sm[2]); if(_sa>12){sheetDateFormat='DD/MM';break;} if(_sb>12){sheetDateFormat='MM/DD';break;} }
+        if (sname !== scPageName) {
+          sheetDateFormat = 'MM/DD'; // Facebook short date-range export
+        } else {
+          for (var _si = dataStart; _si < rows.length; _si++) {
+            var _scRef = XLSX.utils.encode_cell({r:_si, c:C.published});
+            var _sc = ws[_scRef];
+            if (!_sc) continue;
+            var _sv = (typeof _sc.v === 'string') ? _sc.v : (_sc.w || '');
+            var _sm = String(_sv).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+            if (_sm) { var _sa=parseInt(_sm[1]),_sb=parseInt(_sm[2]); if(_sa>12){sheetDateFormat='DD/MM';break;} if(_sb>12){sheetDateFormat='MM/DD';break;} }
+          }
         }
         for (var ri = dataStart; ri < rows.length; ri++) {
           var row = rows[ri];
