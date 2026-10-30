@@ -460,7 +460,7 @@ function dbParseDate(v) {
   if (m2) return m2[0].substring(0,10);
   // Fallback: Excel serial number (only if .w was unavailable and we got cell.v)
   if (typeof v === 'number' && v > 40000) {
-    var dt = new Date(Math.floor((v - 25569) * 86400 * 1000));
+    var dt = new Date(Math.floor(v - 25569) * 86400 * 1000); // floor ก่อน = ตัดเวลาออก เหลือแค่วัน
     var y = dt.getUTCFullYear(), m = dt.getUTCMonth()+1, d = dt.getUTCDate();
     return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
   }
