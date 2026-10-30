@@ -770,11 +770,11 @@ var DB_COL = {
   view_paid:  25
 };
 
-function dbParseDate(v) {
+function dbParseDate(v, fmt) {
   if (v === null || v === undefined || v === '') return null;
   var s = String(v).trim();
   var m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (m1) { var _ma=parseInt(m1[1]); return _ma>12 ? m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0') : m1[3]+'-'+m1[1].padStart(2,'0')+'-'+m1[2].padStart(2,'0'); } // auto DD/MM or MM/DD
+  if (m1) { var _ma=parseInt(m1[1]); if(fmt==='DD/MM'||_ma>12){return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');} return m1[3]+'-'+m1[1].padStart(2,'0')+'-'+m1[2].padStart(2,'0'); }
   var m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m2) return m2[0].substring(0,10);
   if (typeof v === 'number' && v > 40000) {
@@ -875,6 +875,16 @@ window.onDbFileSelected = function(input) {
         }
         // ตรวจ column positions จาก header row อัตโนมัติ
         var C = detectColsFromHeader(rows[dataStart - 1] || []);
+        // Pre-scan: detect date format DD/MM (Thai full-year) vs MM/DD (Facebook short-range)
+        var sheetDateFormat = 'DD/MM'; // default
+        for (var _si = dataStart; _si < rows.length; _si++) {
+          var _scRef = XLSX.utils.encode_cell({r:_si, c:C.published});
+          var _sc = ws[_scRef];
+          if (!_sc) continue;
+          var _sv = (typeof _sc.v === 'string') ? _sc.v : (_sc.w || '');
+          var _sm = String(_sv).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+          if (_sm) { var _sa=parseInt(_sm[1]),_sb=parseInt(_sm[2]); if(_sa>12){sheetDateFormat='DD/MM';break;} if(_sb>12){sheetDateFormat='MM/DD';break;} }
+        }
         for (var ri = dataStart; ri < rows.length; ri++) {
           var row = rows[ri];
           if (!row || row.length < 4) continue;
@@ -885,7 +895,7 @@ window.onDbFileSelected = function(input) {
           var rawDate = _cell
             ? ((typeof _cell.v === 'number' && _cell.v > 40000) ? _cell.v : (_cell.w !== undefined ? _cell.w : _cell.v))
             : '';
-          var dateStr = dbParseDate(rawDate);
+          var dateStr = dbParseDate(rawDate, sheetDateFormat);
           if (!dateStr) continue;
           _dbParsedRows.push({
             sc_page:     scPageName,
